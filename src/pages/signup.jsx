@@ -57,6 +57,8 @@ export default function Signup() {
   }
 
   return (
+    <>
+    <title>Expense Tracker-Signup</title>
     <div className="signup-page">
       {/* Left Visual Banner */}
       <div className="hero-section">
@@ -180,5 +182,6 @@ export default function Signup() {
         </div>
       </div>
     </div>
+    </>
   )
 }

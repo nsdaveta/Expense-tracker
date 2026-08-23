@@ -50,6 +50,8 @@ export default function Login() {
   }
 
   return (
+    <>
+    <title>Expense Tracker-Login</title>
     <div className="login-page">
       {/* Left Visual Banner */}
       <div className="hero-section">
@@ -185,5 +187,6 @@ export default function Login() {
         </div>
       </div>
     </div>
+    </>
   )
 }

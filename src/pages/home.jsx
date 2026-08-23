@@ -210,11 +210,13 @@ export default function Home() {
   if (!user) return null
 
   return (
-    <div className="home-page">
-      <div className="home-shell">
+    <>
+      <title>Expense Tracker-Home</title>
+      <div className="home-page">
+        <div className="home-shell">
 
-        {/* Hero */}
-        <div className="home-hero">
+          {/* Hero */}
+          <div className="home-hero">
           <div className="home-hero-glow" />
           <div className="home-hero-top">
             <div className="home-brand-badge">
@@ -538,5 +540,6 @@ export default function Home() {
         </div>
       )}
     </div>
+    </>
   )
 }
