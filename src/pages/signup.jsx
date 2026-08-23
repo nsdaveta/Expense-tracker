@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Wallet, User, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react'
+import { signup } from '../lib/api'
 import './signup.css'
 
 export default function Signup() {
@@ -21,7 +22,7 @@ export default function Signup() {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
@@ -36,23 +37,19 @@ export default function Signup() {
 
     setLoading(true)
 
-    const user = localStorage.getItem('user')
-    const email = localStorage.getItem('email')
-    const password = localStorage.getItem('password')
-    if (JSON.parse(user) === formData.name && JSON.parse(email) === formData.email && JSON.parse(password) === formData.password) {
-      window.alert('User Already Exists, Try Logging In instead')
-      setLoading(false)
+    try {
+      await signup({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
+      setFormData({ name: '', email: '', password: '', confirmPassword: '' })
+      window.alert('Registration successful! Please log in.')
       navigate('/login')
-      return
-    }
-    else{
-    localStorage.setItem('user', JSON.stringify(formData.name))
-    localStorage.setItem('email', JSON.stringify(formData.email))
-    localStorage.setItem('password', JSON.stringify(formData.password))
-    setFormData({ name: '', email: '', password: '', confirmPassword: '' })
-    window.alert('Registration successful!')
-    setLoading(false)
-    navigate('/login')
+    } catch (err) {
+      window.alert(err.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 

@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (secrets belong in Vercel's dashboard, not in git)
+.env
+.env.local
+.env*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

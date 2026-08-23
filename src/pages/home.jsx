@@ -22,6 +22,13 @@ import {
   Undo2,
   MoreHorizontal,
 } from 'lucide-react'
+import {
+  getStoredUser,
+  clearSession,
+  fetchTransactions,
+  createTransaction,
+  deleteTransaction,
+} from '../lib/api'
 import './home.css'
 
 // ── category → icon / color mapping ────────────────────────────────────────
@@ -57,37 +64,6 @@ function sanitizeCategory(item) {
   return validList.includes(item.category) ? item.category : 'Other'
 }
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
-
-function getCurrentUser() {
-  const isLoggedIn = localStorage.getItem('isLoggedIn')
-  if (isLoggedIn !== 'true') return null
-
-  const name  = localStorage.getItem('user')
-  const email = localStorage.getItem('email')
-  if (!name || !email) return null
-  return {
-    name:  JSON.parse(name),
-    email: JSON.parse(email),
-  }
-}
-
-function logoutUser() {
-  localStorage.removeItem('isLoggedIn')
-}
-
-function getExpenses(email) {
-  try {
-    return JSON.parse(localStorage.getItem(`expenses_${email}`)) || []
-  } catch {
-    return []
-  }
-}
-
-function saveExpenses(email, list) {
-  localStorage.setItem(`expenses_${email}`, JSON.stringify(list))
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -109,22 +85,26 @@ export default function Home() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const currentUser = getCurrentUser()
+    const currentUser = getStoredUser()
     if (!currentUser) {
       navigate('/login')
       return
     }
     setUser(currentUser)
 
-    const stored = getExpenses(currentUser.email)
-    const cleaned = stored.map((item) => ({ ...item, category: sanitizeCategory(item) }))
-    const wasDirty = cleaned.some((item, i) => item.category !== stored[i].category)
-    if (wasDirty) saveExpenses(currentUser.email, cleaned)
-    setExpenses(cleaned)
+    fetchTransactions()
+      .then(({ transactions }) => {
+        const cleaned = transactions.map((item) => ({ ...item, category: sanitizeCategory(item) }))
+        setExpenses(cleaned)
+      })
+      .catch((err) => {
+        window.alert(err.message || 'Could not load your transactions.')
+        if (err.message?.includes('authenticated')) navigate('/login')
+      })
   }, [navigate])
 
   const handleLogout = () => {
-    logoutUser()
+    clearSession()
     navigate('/login')
   }
 
@@ -145,32 +125,39 @@ export default function Home() {
     }
   }
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault()
     if (!form.title || !form.amount || parseFloat(form.amount) <= 0) return
 
-    const newItem = { ...form, id: Date.now().toString() }
-    const updated = [...expenses, newItem]
-    saveExpenses(user.email, updated)
-    setExpenses(updated)
-    setForm({
-      title: '',
-      amount: '',
-      category: 'Groceries',
-      type: 'expense',
-      date: new Date().toISOString().split('T')[0],
-      paymentMethod: 'cash',
-      bankName: '',
-      accountNumber: '',
-      ifscCode: '',
-    })
-    setShowAddModal(false)
+    try {
+      const { transaction } = await createTransaction(form)
+      setExpenses((prev) => [...prev, transaction])
+      setForm({
+        title: '',
+        amount: '',
+        category: 'Groceries',
+        type: 'expense',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'cash',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
+      })
+      setShowAddModal(false)
+    } catch (err) {
+      window.alert(err.message || 'Could not add transaction. Please try again.')
+    }
   }
 
-  const handleDelete = (id) => {
-    const updated = expenses.filter((item) => item.id !== id)
-    saveExpenses(user.email, updated)
-    setExpenses(updated)
+  const handleDelete = async (id) => {
+    const previous = expenses
+    setExpenses((prev) => prev.filter((item) => item.id !== id)) // optimistic
+    try {
+      await deleteTransaction(id)
+    } catch (err) {
+      setExpenses(previous) // roll back on failure
+      window.alert(err.message || 'Could not delete transaction. Please try again.')
+    }
   }
 
   const totalIncome = expenses

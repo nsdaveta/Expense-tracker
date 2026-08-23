@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Wallet, User, Mail, Lock, Eye, EyeOff, ArrowRight, PiggyBank, BarChart3, ShieldCheck } from "lucide-react"
+import { login, setSession } from "../lib/api"
 import "./login.css"
 
 export default function Login() {
@@ -21,32 +22,23 @@ export default function Login() {
     }))
   }
 
-  const handlesubmit = (e) => {
+  const handlesubmit = async (e) => {
     e.preventDefault()
-
-    const storedUser = localStorage.getItem("user")
-    const storedEmail = localStorage.getItem("email")
-    const storedPassword = localStorage.getItem("password")
-
-    if (!storedUser || !storedEmail || !storedPassword) {
-      window.alert("Login Failed, User not found!!!!")
-      return
-    }
-
-    if (
-      JSON.parse(storedUser) !== FormData.name ||
-      JSON.parse(storedEmail) !== FormData.email ||
-      JSON.parse(storedPassword) !== FormData.password
-    ) {
-      window.alert("Invalid credentials!")
-      return
-    }
-
     setLoading(true)
-    localStorage.setItem("isLoggedIn", "true")
-    setFormData({ name: "", email: "", password: "" })
-    setLoading(false)
-    navigate("/")
+
+    try {
+      const { token, user } = await login({
+        email: FormData.email,
+        password: FormData.password,
+      })
+      setSession(token, user)
+      setFormData({ name: "", email: "", password: "" })
+      navigate("/")
+    } catch (err) {
+      window.alert(err.message || "Login failed. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

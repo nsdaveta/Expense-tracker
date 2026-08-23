@@ -3,23 +3,10 @@ import Login from './pages/login'
 import Signup from './pages/signup'
 import Home from './pages/home'
 import Navbar from './pages/components/navbar'
-
-function getCurrentUser() {
-  const isLoggedIn = localStorage.getItem('isLoggedIn')
-  if (isLoggedIn !== 'true') return null
-
-  const name  = localStorage.getItem('user')
-  const email = localStorage.getItem('email')
-  if (!name || !email) return null
-  return {
-    name:  JSON.parse(name),
-    email: JSON.parse(email),
-  }
-}
+import { isLoggedIn } from './lib/api'
 
 function ProtectedRoute({ children }) {
-  const user = getCurrentUser()
-  if (!user) {
+  if (!isLoggedIn()) {
     return <Navigate to="/login" replace />
   }
   return children
