@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#131b2e"/>
+      <stop offset="1" stop-color="#090d16"/>
+    </linearGradient>
+    <linearGradient id="wallet" x1="10" y1="16" x2="54" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+
+  <!-- wallet body -->
+  <path d="M12 22c0-3.31 2.69-6 6-6h26c3.31 0 6 2.69 6 6v3H12v-3z" fill="url(#wallet)"/>
+  <rect x="12" y="25" width="38" height="24" rx="6" fill="url(#wallet)"/>
+  <rect x="15.5" y="28.5" width="31" height="17" rx="3.5" fill="#090d16"/>
+
+  <!-- fold flap -->
+  <circle cx="42" cy="37" r="4.5" fill="url(#wallet)"/>
+</svg>
