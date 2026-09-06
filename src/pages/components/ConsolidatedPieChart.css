@@ -86,7 +86,7 @@
   gap: 2rem;
   align-items: center;
   overflow: hidden;
-  transition: padding-top 0.15s ease;
+  transition: padding 0.15s ease;
 }
 
 .consolidated-svg-container.outer-labeled-container {

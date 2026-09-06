@@ -55,11 +55,14 @@ function isLabelTooWideForArc(text, spanDeg, radius, fontSize) {
 
 const TX_LABEL_FONT_SIZE = 7.5
 
-// Figures out how far above the pie's own top edge (viewBox y = 0) the
-// widest label actually reaches, so the card can grow just enough room for
-// it — no more, no less — instead of clipping it or leaving excess empty space.
-function computeTopLabelClearance(slices, outerRadius, cx, cy, fontSize) {
+// Figures out how far each label reaches beyond the chart's own viewBox on
+// every side, so the card can grow just enough room in each direction — no
+// more, no less — instead of clipping labels or leaving excess empty space.
+function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSize) {
+  let minX = 0
+  let maxX = viewBoxSize
   let minY = 0
+  let maxY = viewBoxSize
   slices.forEach((slice) => {
     slice.subSlices.forEach((sub) => {
       if (!sub.tx) return
@@ -80,22 +83,36 @@ function computeTopLabelClearance(slices, outerRadius, cx, cy, fontSize) {
       const rad = (angleDeg * Math.PI) / 180
       const dx = Math.cos(rad)
       const dy = Math.sin(rad)
+      let x0 = labelX
       let y0 = labelY
+      let x1 = labelX
       let y1 = labelY
       if (anchor === 'start') {
+        x1 = labelX + dx * textLen
         y1 = labelY + dy * textLen
       } else if (anchor === 'end') {
+        x0 = labelX - dx * textLen
         y0 = labelY - dy * textLen
       } else {
+        x0 = labelX - (dx * textLen) / 2
         y0 = labelY - (dy * textLen) / 2
+        x1 = labelX + (dx * textLen) / 2
         y1 = labelY + (dy * textLen) / 2
       }
+      minX = Math.min(minX, x0, x1)
+      maxX = Math.max(maxX, x0, x1)
       minY = Math.min(minY, y0, y1)
+      maxY = Math.max(maxY, y0, y1)
     })
   })
-  if (minY >= 0) return 0
-  // Small buffer for the glyphs' own height around the text baseline.
-  return -minY + fontSize
+  // Small buffer for the glyphs' own height/width around the text baseline.
+  const buffer = fontSize
+  return {
+    top: minY < 0 ? -minY + buffer : 0,
+    bottom: maxY > viewBoxSize ? maxY - viewBoxSize + buffer : 0,
+    left: minX < 0 ? -minX + buffer : 0,
+    right: maxX > viewBoxSize ? maxX - viewBoxSize + buffer : 0,
+  }
 }
 
 function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx, cy) {
@@ -294,12 +311,19 @@ export default function ExpensePieChart({
     ? slices.find((s) => s.category === activeCategory)
     : null
 
-  // Grow the content area's top padding to exactly fit the widest label —
-  // stopping right after its last word — instead of a fixed guess or clipping.
-  const topLabelOverflowUnits = computeTopLabelClearance(slices, outerRadius, cx, cy, TX_LABEL_FONT_SIZE)
+  // Grow the content area's padding on every side to exactly fit the widest
+  // labels — stopping right after their last word — instead of a fixed guess
+  // or clipping mid-word.
   const svgContainerPx = 260
   const svgViewBoxUnits = 200
-  const topClearancePx = topLabelOverflowUnits * (svgContainerPx / svgViewBoxUnits)
+  const scale = svgContainerPx / svgViewBoxUnits
+  const labelClearance = computeLabelClearance(slices, outerRadius, cx, cy, TX_LABEL_FONT_SIZE, svgViewBoxUnits)
+  const contentPadding = {
+    paddingTop: `${labelClearance.top * scale}px`,
+    paddingBottom: `${labelClearance.bottom * scale}px`,
+    paddingLeft: `${labelClearance.left * scale}px`,
+    paddingRight: `${labelClearance.right * scale}px`,
+  }
 
   return (
     <div className="pie-chart-card">
@@ -330,7 +354,7 @@ export default function ExpensePieChart({
         </div>
       </div>
 
-      <div className="pie-chart-content" style={{ paddingTop: `${topClearancePx}px` }}>
+      <div className="pie-chart-content" style={contentPadding}>
         {/* SVG Container */}
         <div className="pie-svg-container">
           <svg
