@@ -374,9 +374,9 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .drawer-tx-meta {
