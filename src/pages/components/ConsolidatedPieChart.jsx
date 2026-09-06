@@ -70,11 +70,10 @@ function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx,
   }
 }
 
-// Function to generate an open arc path for outer border brackets & textPaths
-function createOuterArcPath(startPercent, endPercent, radius, cx, cy, clockwise = true) {
-  // Add small padding to avoid overlapping the exact boundary tips
-  const pStart = Math.max(0, startPercent + 0.008)
-  const pEnd = Math.min(1, endPercent - 0.008)
+// Function to generate an open arc path for outer border brackets
+function createOuterArcPath(startPercent, endPercent, radius, cx, cy) {
+  const pStart = Math.max(0, startPercent + 0.006)
+  const pEnd = Math.min(1, endPercent - 0.006)
 
   if (pEnd <= pStart) return ''
 
@@ -89,11 +88,7 @@ function createOuterArcPath(startPercent, endPercent, radius, cx, cy, clockwise 
   const span = pEnd - pStart
   const largeArcFlag = span > 0.5 ? 1 : 0
 
-  if (clockwise) {
-    return `M ${sx} ${sy} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${ex} ${ey}`
-  } else {
-    return `M ${ex} ${ey} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${sx} ${sy}`
-  }
+  return `M ${sx} ${sy} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${ex} ${ey}`
 }
 
 export default function ConsolidatedPieChart({
@@ -222,33 +217,39 @@ export default function ConsolidatedPieChart({
   // Geometry dimensions
   const cx = 130
   const cy = 130
-  const outerRadius = 76
-  const innerRadius = chartMode === 'donut' ? 48 : 0
-  const bracketRadius = 87
+  const outerRadius = 72
+  const innerRadius = chartMode === 'donut' ? 46 : 0
+  const bracketRadius = 84
   const textRadius = 100
 
   const activeSlice = activeHeadKey ? slices.find((s) => s.key === activeHeadKey) : null
 
-  // Outer Arc Paths for circling labels & brackets
+  // Outer Arc Paths for circling brackets
   const incomeBracketPath = hasIncome
-    ? createOuterArcPath(incomeStart, incomeEnd, bracketRadius, cx, cy, true)
+    ? createOuterArcPath(incomeStart, incomeEnd, bracketRadius, cx, cy)
     : ''
   const expenseBracketPath = hasExpense
-    ? createOuterArcPath(expenseStart, expenseEnd, bracketRadius, cx, cy, true)
+    ? createOuterArcPath(expenseStart, expenseEnd, bracketRadius, cx, cy)
     : ''
 
-  // TextPaths - orienting them so text is readable (clockwise on top/right, counter-clockwise if on bottom)
-  const incomeMidAngle = (incomeStart + incomeEnd) / 2
-  const incomeIsBottom = incomeMidAngle > 0.25 && incomeMidAngle < 0.75
-  const incomeTextPath = hasIncome
-    ? createOuterArcPath(incomeStart, incomeEnd, textRadius, cx, cy, !incomeIsBottom)
-    : ''
+  // Midpoint angle calculation for reliable, unclipped outer labels
+  const incomeMidPercent = (incomeStart + incomeEnd) / 2
+  const [incomeMidX, incomeMidY] = getCoordinatesForPercent(incomeMidPercent - 0.25)
+  const incomeLabelX = cx + textRadius * incomeMidX
+  const incomeLabelY = cy + textRadius * incomeMidY
+  let incomeAngleDeg = ((incomeMidPercent - 0.25) * 360) + 90
+  if (incomeAngleDeg > 90 && incomeAngleDeg < 270) {
+    incomeAngleDeg -= 180
+  }
 
-  const expenseMidAngle = (expenseStart + expenseEnd) / 2
-  const expenseIsBottom = expenseMidAngle > 0.25 && expenseMidAngle < 0.75
-  const expenseTextPath = hasExpense
-    ? createOuterArcPath(expenseStart, expenseEnd, textRadius, cx, cy, !expenseIsBottom)
-    : ''
+  const expenseMidPercent = (expenseStart + expenseEnd) / 2
+  const [expenseMidX, expenseMidY] = getCoordinatesForPercent(expenseMidPercent - 0.25)
+  const expenseLabelX = cx + textRadius * expenseMidX
+  const expenseLabelY = cy + textRadius * expenseMidY
+  let expenseAngleDeg = ((expenseMidPercent - 0.25) * 360) + 90
+  if (expenseAngleDeg > 90 && expenseAngleDeg < 270) {
+    expenseAngleDeg -= 180
+  }
 
   return (
     <div className="consolidated-card">
@@ -343,14 +344,6 @@ export default function ConsolidatedPieChart({
                   <stop offset="100%" stopColor={slice.color} stopOpacity="0.75" />
                 </linearGradient>
               ))}
-
-              {/* Text paths for circling labels */}
-              {incomeTextPath && (
-                <path id="path-income-circling-text" d={incomeTextPath} fill="none" />
-              )}
-              {expenseTextPath && (
-                <path id="path-expense-circling-text" d={expenseTextPath} fill="none" />
-              )}
             </defs>
 
             {/* Slices of Pie */}
@@ -404,28 +397,28 @@ export default function ConsolidatedPieChart({
             )}
 
             {/* Circling Outside Text Labels: "INCOME" & "EXPENDITURES" */}
-            {hasIncome && incomeTextPath && (
-              <text className="circling-arc-text text-income">
-                <textPath
-                  href="#path-income-circling-text"
-                  startOffset="50%"
+            {hasIncome && (
+              <g transform={`translate(${incomeLabelX}, ${incomeLabelY}) rotate(${incomeAngleDeg})`}>
+                <text
+                  className="circling-arc-text text-income"
                   textAnchor="middle"
+                  dominantBaseline="central"
                 >
                   ● INCOME
-                </textPath>
-              </text>
+                </text>
+              </g>
             )}
 
-            {hasExpense && expenseTextPath && (
-              <text className="circling-arc-text text-expense">
-                <textPath
-                  href="#path-expense-circling-text"
-                  startOffset="50%"
+            {hasExpense && (
+              <g transform={`translate(${expenseLabelX}, ${expenseLabelY}) rotate(${expenseAngleDeg})`}>
+                <text
+                  className="circling-arc-text text-expense"
                   textAnchor="middle"
+                  dominantBaseline="central"
                 >
                   ● EXPENDITURES
-                </textPath>
-              </text>
+                </text>
+              </g>
             )}
           </svg>
 
