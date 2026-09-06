@@ -534,6 +534,10 @@ export default function ConsolidatedPieChart({
                         type="button"
                         className="expand-tx-btn"
                         title={isExpanded ? 'Hide transactions' : 'Show transactions'}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleHeadExpand(slice.key)
+                        }}
                       >
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>

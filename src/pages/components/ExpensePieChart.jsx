@@ -339,6 +339,10 @@ export default function ExpensePieChart({
                         type="button"
                         className="expand-tx-btn"
                         title={isExpanded ? 'Hide transactions' : 'Show transactions'}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleCategoryExpand(slice.category)
+                        }}
                       >
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
