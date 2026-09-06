@@ -89,6 +89,8 @@
   grid-template-columns: 240px 1fr;
   gap: 2rem;
   align-items: center;
+  overflow: hidden;
+  padding-top: 0.5rem;
 }
 
 .pie-svg-container {

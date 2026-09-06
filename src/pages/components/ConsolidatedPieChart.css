@@ -84,6 +84,8 @@
   grid-template-columns: 290px 1fr;
   gap: 2rem;
   align-items: center;
+  overflow: hidden;
+  padding-top: 0.5rem;
 }
 
 .consolidated-svg-container.outer-labeled-container {
