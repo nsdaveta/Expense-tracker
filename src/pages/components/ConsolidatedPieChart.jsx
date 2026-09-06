@@ -214,13 +214,13 @@ export default function ConsolidatedPieChart({
     }
   })
 
-  // Geometry dimensions
-  const cx = 130
-  const cy = 130
-  const outerRadius = 72
-  const innerRadius = chartMode === 'donut' ? 46 : 0
-  const bracketRadius = 84
-  const textRadius = 100
+  // Geometry dimensions matching Expense/Income charts exactly
+  const cx = 140
+  const cy = 140
+  const outerRadius = 94
+  const innerRadius = chartMode === 'donut' ? 57 : 0
+  const bracketRadius = 106
+  const textRadius = 122
 
   const activeSlice = activeHeadKey ? slices.find((s) => s.key === activeHeadKey) : null
 
@@ -322,7 +322,7 @@ export default function ConsolidatedPieChart({
         {/* SVG Container */}
         <div className="consolidated-svg-container outer-labeled-container">
           <svg
-            viewBox="0 0 260 260"
+            viewBox="0 0 280 280"
             className="consolidated-svg outer-labeled-svg"
             onMouseLeave={() => setActiveHeadKey(null)}
           >
