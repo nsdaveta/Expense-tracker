@@ -330,22 +330,24 @@ export default function ExpensePieChart({
               })
             )}
 
-            {/* Transaction labels along the pie's outer boundary */}
+            {/* Transaction labels rendered inside each slice (at ~75% radius from center) */}
             {slices.map((slice) =>
               slice.subSlices
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const isSmallSlice = spanDeg < 10
-                  const orientation = isSmallSlice ? 'radial' : 'tangential'
-                  const labelRadius = outerRadius + (isSmallSlice ? 15 : 9)
+                  // Only label slices wide enough to hold text
+                  if (spanDeg < 8) return null
+                  const labelRadius = innerRadius > 0
+                    ? innerRadius + (outerRadius - innerRadius) * 0.62
+                    : outerRadius * 0.65
                   const { labelX, labelY, angleDeg } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
                     labelRadius,
                     cx,
                     cy,
-                    orientation
+                    spanDeg < 18 ? 'radial' : 'tangential'
                   )
                   return (
                     <g
@@ -354,11 +356,11 @@ export default function ExpensePieChart({
                     >
                       <text
                         className="tx-arc-label"
-                        style={{ fill: sub.meta.color }}
+                        style={{ fill: sub.meta.color, opacity: 0.92 }}
                         textAnchor="middle"
                         dominantBaseline="central"
                       >
-                        {sub.tx.title}
+                        {sub.tx.title.length > 12 ? sub.tx.title.slice(0, 11) + '\u2026' : sub.tx.title}
                       </text>
                     </g>
                   )
