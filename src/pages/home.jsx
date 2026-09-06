@@ -257,6 +257,7 @@ export default function Home() {
           categoryTotals={categoryTotals}
           getCategoryMeta={getCategoryMeta}
           totalAmount={totalExpense}
+          expenses={expenses}
         />
 
         {/* Income Sources Pie Chart */}
@@ -266,6 +267,7 @@ export default function Home() {
           categoryTotals={incomeCategoryTotals}
           getCategoryMeta={getCategoryMeta}
           totalAmount={totalIncome}
+          expenses={expenses}
         />
 
         {/* Consolidated Income & Expenditures Pie Chart */}
@@ -277,6 +279,7 @@ export default function Home() {
           totalExpense={totalExpense}
           netBalance={netBalance}
           title="Consolidated Income & Expenditures"
+          expenses={expenses}
         />
 
         {/* Main dashboard grid */}
