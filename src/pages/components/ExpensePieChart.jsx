@@ -18,23 +18,21 @@ function getCoordinatesForPercent(percent) {
   return [x, y]
 }
 
-// Computes position + rotation for a label that curves along the pie's
-// boundary at the midpoint angle of a given percent range.
-function getArcLabelTransform(startPercent, endPercent, radius, cx, cy) {
+// Computes position + rotation for a label near a given percent range.
+// 'tangential' makes the label curve along the pie's circumference (used for
+// wider slices); 'radial' points the label straight out along the slice's own
+// radius line (slanted), which reads better for slices too thin to fit
+// tangential text.
+function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientation = 'tangential') {
   const midPercent = (startPercent + endPercent) / 2
   const [midX, midY] = getCoordinatesForPercent(midPercent - 0.25)
   const labelX = cx + radius * midX
   const labelY = cy + radius * midY
-  let angleDeg = ((midPercent - 0.25) * 360) + 90
-  if (angleDeg > 90 && angleDeg < 270) {
-    angleDeg -= 180
-  }
+  let angleDeg = (midPercent - 0.25) * 360
+  if (orientation === 'tangential') angleDeg += 90
+  angleDeg = ((angleDeg % 360) + 360) % 360
+  if (angleDeg > 90 && angleDeg < 270) angleDeg -= 180
   return { labelX, labelY, angleDeg }
-}
-
-function truncateLabel(text, maxLen = 10) {
-  if (!text) return ''
-  return text.length > maxLen ? `${text.slice(0, maxLen - 1)}…` : text
 }
 
 function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx, cy) {
@@ -337,12 +335,17 @@ export default function ExpensePieChart({
               slice.subSlices
                 .filter((sub) => sub.tx)
                 .map((sub) => {
+                  const spanDeg = (sub.endPercent - sub.startPercent) * 360
+                  const isSmallSlice = spanDeg < 10
+                  const orientation = isSmallSlice ? 'radial' : 'tangential'
+                  const labelRadius = outerRadius + (isSmallSlice ? 15 : 9)
                   const { labelX, labelY, angleDeg } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
-                    outerRadius + 9,
+                    labelRadius,
                     cx,
-                    cy
+                    cy,
+                    orientation
                   )
                   return (
                     <g
@@ -355,7 +358,7 @@ export default function ExpensePieChart({
                         textAnchor="middle"
                         dominantBaseline="central"
                       >
-                        {truncateLabel(sub.tx.title)}
+                        {sub.tx.title}
                       </text>
                     </g>
                   )
