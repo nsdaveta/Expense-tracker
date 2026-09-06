@@ -28,11 +28,19 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   const [midX, midY] = getCoordinatesForPercent(midPercent - 0.25)
   const labelX = cx + radius * midX
   const labelY = cy + radius * midY
-  let angleDeg = (midPercent - 0.25) * 360
+  const rawAngleDeg = ((((midPercent - 0.25) * 360) % 360) + 360) % 360
+  // Whether the un-offset radial direction points into the lower half of the
+  // circle, in which case we flip the rotation 180° to keep text upright.
+  const radialFlipped = rawAngleDeg > 90 && rawAngleDeg < 270
+  let angleDeg = rawAngleDeg
   if (orientation === 'tangential') angleDeg += 90
   angleDeg = ((angleDeg % 360) + 360) % 360
   if (angleDeg > 90 && angleDeg < 270) angleDeg -= 180
-  return { labelX, labelY, angleDeg }
+  // For radial labels, anchor the text at its base (nearest the pie) so the
+  // whole label extends outward from there — never back over the slices.
+  // Which side counts as "base" flips along with the rotation above.
+  const anchor = orientation === 'radial' ? (radialFlipped ? 'end' : 'start') : 'middle'
+  return { labelX, labelY, angleDeg, anchor }
 }
 
 // Estimates whether a label's text would spill past its own slice's arc
@@ -350,7 +358,7 @@ export default function ExpensePieChart({
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, 7.5)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
-                  const { labelX, labelY, angleDeg } = getArcLabelTransform(
+                  const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
                     labelRadius,
@@ -366,7 +374,7 @@ export default function ExpensePieChart({
                       <text
                         className="tx-arc-label"
                         style={{ fill: sub.meta.color }}
-                        textAnchor="middle"
+                        textAnchor={anchor}
                         dominantBaseline="central"
                       >
                         {sub.tx.title}
