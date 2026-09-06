@@ -35,6 +35,16 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   return { labelX, labelY, angleDeg }
 }
 
+// Estimates whether a label's text would spill past its own slice's arc
+// length (and thus risk overlapping the neighboring slice's label) at a given
+// radius/font size, so we only switch to the slanted radial style when it's
+// actually needed rather than by a fixed angle cutoff.
+function isLabelTooWideForArc(text, spanDeg, radius, fontSize) {
+  const arcLength = (spanDeg * Math.PI) / 180 * radius
+  const estimatedTextWidth = (text?.length || 0) * fontSize * 0.62
+  return estimatedTextWidth > arcLength
+}
+
 function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx, cy) {
   const isFullCircle = endPercent - startPercent >= 0.9999
   
@@ -336,9 +346,10 @@ export default function ExpensePieChart({
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const isSmallSlice = spanDeg < 10
-                  const orientation = isSmallSlice ? 'radial' : 'tangential'
-                  const labelRadius = outerRadius + (isSmallSlice ? 15 : 9)
+                  const tangentialRadius = outerRadius + 9
+                  const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, 7.5)
+                  const orientation = isTooWide ? 'radial' : 'tangential'
+                  const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
                   const { labelX, labelY, angleDeg } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
