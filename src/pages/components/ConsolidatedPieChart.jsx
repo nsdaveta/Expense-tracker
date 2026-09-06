@@ -4,6 +4,11 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  Banknote,
+  Calendar,
 } from 'lucide-react'
 import './ConsolidatedPieChart.css'
 
@@ -99,16 +104,28 @@ export default function ConsolidatedPieChart({
   totalExpense = 0,
   netBalance = 0,
   title = 'Consolidated Income & Expenditures',
+  expenses = [],
 }) {
   const [activeHeadKey, setActiveHeadKey] = useState(null)
+  const [expandedHeads, setExpandedHeads] = useState({})
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
   const [filterType, setFilterType] = useState('all') // 'all' | 'income' | 'expense'
 
-  // Build grouped Income and Expenditure heads
+  const toggleHeadExpand = (key) => {
+    setExpandedHeads((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
+  // Build grouped Income and Expenditure heads with their corresponding transactions
   const incomeHeads = []
   Object.entries(incomeCategoryTotals).forEach(([category, amount]) => {
     if (amount > 0) {
       const meta = getCategoryMeta ? getCategoryMeta(category) : { color: '#10b981', icon: TrendingUp }
+      const headTxs = (expenses || []).filter(
+        (tx) => tx.type === 'income' && tx.category === category
+      )
       incomeHeads.push({
         key: `income-${category}`,
         category,
@@ -118,6 +135,7 @@ export default function ConsolidatedPieChart({
         meta,
         color: meta.color || '#10b981',
         icon: meta.icon || TrendingUp,
+        transactions: headTxs,
       })
     }
   })
@@ -127,6 +145,9 @@ export default function ConsolidatedPieChart({
   Object.entries(categoryTotals).forEach(([category, amount]) => {
     if (amount > 0) {
       const meta = getCategoryMeta ? getCategoryMeta(category) : { color: '#ef4444', icon: TrendingDown }
+      const headTxs = (expenses || []).filter(
+        (tx) => tx.type === 'expense' && tx.category === category
+      )
       expenseHeads.push({
         key: `expense-${category}`,
         category,
@@ -136,6 +157,7 @@ export default function ConsolidatedPieChart({
         meta,
         color: meta.color || '#ef4444',
         icon: meta.icon || TrendingDown,
+        transactions: headTxs,
       })
     }
   })
@@ -439,6 +461,9 @@ export default function ConsolidatedPieChart({
                   <span className="center-pct" style={{ color: activeSlice.color }}>
                     {activeSlice.percentageFormatted}%
                   </span>
+                  <span className="center-tx-count">
+                    {activeSlice.transactions.length} {activeSlice.transactions.length === 1 ? 'transaction' : 'transactions'}
+                  </span>
                 </>
               ) : (
                 <>
@@ -455,48 +480,109 @@ export default function ConsolidatedPieChart({
           )}
         </div>
 
-        {/* Legend & All Heads List */}
+        {/* Legend & All Heads with Nested Transactions List */}
         <div className="consolidated-details-container">
           <div className="consolidated-heads-grid">
             {slices.map((slice) => {
               const Icon = slice.icon
               const isHovered = activeHeadKey === slice.key
+              const isExpanded = !!expandedHeads[slice.key]
 
               return (
                 <div
                   key={slice.key}
-                  className={`consolidated-head-item ${isHovered ? 'head-item-active' : ''}`}
+                  className={`consolidated-head-card ${isHovered ? 'head-item-active' : ''} ${isExpanded ? 'card-expanded' : ''}`}
                   onMouseEnter={() => setActiveHeadKey(slice.key)}
                   onMouseLeave={() => setActiveHeadKey(null)}
                 >
-                  <div className="head-item-left">
-                    <span
-                      className="legend-icon-badge"
-                      style={{
-                        backgroundColor: `${slice.color}25`,
-                        color: slice.color,
-                        borderColor: isHovered ? slice.color : 'transparent',
-                      }}
-                    >
-                      <Icon size={14} />
-                    </span>
-                    <div className="head-item-meta">
-                      <div className="head-item-title-row">
-                        <span className="head-category-name">{slice.category}</span>
-                        <span className={`head-type-pill ${slice.type === 'income' ? 'pill-income' : 'pill-expense'}`}>
-                          {slice.typeLabel}
+                  {/* Card Header Row */}
+                  <div
+                    className="consolidated-head-header"
+                    onClick={() => toggleHeadExpand(slice.key)}
+                  >
+                    <div className="head-item-left">
+                      <span
+                        className="legend-icon-badge"
+                        style={{
+                          backgroundColor: `${slice.color}25`,
+                          color: slice.color,
+                          borderColor: isHovered ? slice.color : 'transparent',
+                        }}
+                      >
+                        <Icon size={14} />
+                      </span>
+                      <div className="head-item-meta">
+                        <div className="head-item-title-row">
+                          <span className="head-category-name">{slice.category}</span>
+                          <span className={`head-type-pill ${slice.type === 'income' ? 'pill-income' : 'pill-expense'}`}>
+                            {slice.typeLabel}
+                          </span>
+                        </div>
+                        <span className="head-pct-label">
+                          {slice.percentageFormatted}% · {slice.transactions.length} {slice.transactions.length === 1 ? 'tx' : 'txs'}
                         </span>
                       </div>
-                      <span className="head-pct-label">
-                        {slice.percentageFormatted}% of {filterType === 'all' ? 'total flow' : (filterType === 'income' ? 'income' : 'expenditures')}
-                      </span>
+                    </div>
+
+                    <div className="head-item-right-wrapper">
+                      <div className="head-item-right">
+                        <span className={`head-amount ${slice.type === 'income' ? 'text-green' : 'text-red'}`}>
+                          {slice.type === 'income' ? '+' : '-'}₹{slice.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="expand-tx-btn"
+                        title={isExpanded ? 'Hide transactions' : 'Show transactions'}
+                      >
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
                     </div>
                   </div>
-                  <div className="head-item-right">
-                    <span className={`head-amount ${slice.type === 'income' ? 'text-green' : 'text-red'}`}>
-                      {slice.type === 'income' ? '+' : '-'}₹{slice.amount.toFixed(2)}
-                    </span>
-                  </div>
+
+                  {/* Collapsible Transactions Drawer */}
+                  {isExpanded && (
+                    <div className="head-transactions-drawer">
+                      <div className="drawer-header-label">Transactions under {slice.category}:</div>
+                      {slice.transactions.length === 0 ? (
+                        <div className="drawer-empty">No transaction details available</div>
+                      ) : (
+                        <div className="drawer-tx-list">
+                          {slice.transactions.map((tx) => (
+                            <div key={tx.id || `${tx.title}-${tx.date}-${tx.amount}`} className="drawer-tx-row">
+                              <div className="drawer-tx-left">
+                                <span className="drawer-tx-title">{tx.title}</span>
+                                <div className="drawer-tx-meta">
+                                  <span className="meta-tag date-tag">
+                                    <Calendar size={10} />
+                                    {tx.date}
+                                  </span>
+                                  <span className="meta-tag method-tag">
+                                    {tx.paymentMethod === 'bank' ? (
+                                      <>
+                                        <CreditCard size={10} />
+                                        Online {tx.bankName ? `(${tx.bankName})` : ''}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Banknote size={10} />
+                                        Cash
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="drawer-tx-right">
+                                <span className={`drawer-tx-amount ${slice.type === 'income' ? 'text-green' : 'text-red'}`}>
+                                  {slice.type === 'income' ? '+' : '-'}₹{Number(tx.amount).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}

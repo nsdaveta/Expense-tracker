@@ -3,6 +3,11 @@ import {
   PieChart as PieIcon,
   TrendingDown,
   TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  Banknote,
+  Calendar,
 } from 'lucide-react'
 import './ExpensePieChart.css'
 
@@ -80,8 +85,10 @@ export default function ExpensePieChart({
   totalAmount,
   type = 'expense', // 'expense' | 'income'
   title,
+  expenses = [],
 }) {
   const [activeCategory, setActiveCategory] = useState(null)
+  const [expandedCategories, setExpandedCategories] = useState({})
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
 
   const isIncome = type === 'income'
@@ -97,6 +104,13 @@ export default function ExpensePieChart({
     : (totalExpense !== undefined ? totalExpense : categories.reduce((sum, [_, amt]) => sum + amt, 0))
 
   const HeaderIcon = isIncome ? TrendingUp : TrendingDown
+
+  const toggleCategoryExpand = (category) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }))
+  }
 
   if (categories.length === 0 || effectiveTotal === 0) {
     return (
@@ -126,13 +140,17 @@ export default function ExpensePieChart({
     )
   }
 
-  // Calculate cumulative percentages
+  // Calculate cumulative percentages & attach transactions under each head
   let cumulativePercent = 0
   const slices = categories.map(([category, amount]) => {
     const percent = amount / effectiveTotal
     const startPercent = cumulativePercent
     cumulativePercent += percent
     const meta = getCategoryMeta(category)
+
+    const headTransactions = (expenses || []).filter(
+      (tx) => tx.type === type && tx.category === category
+    )
 
     return {
       category,
@@ -142,6 +160,7 @@ export default function ExpensePieChart({
       startPercent,
       endPercent: cumulativePercent,
       meta,
+      transactions: headTransactions,
     }
   })
 
@@ -246,9 +265,14 @@ export default function ExpensePieChart({
                   <span className="center-subtitle" style={{ color: activeSlice.meta.color }}>
                     {activeSlice.category}
                   </span>
-                  <span className="center-amount">₹{activeSlice.amount.toFixed(2)}</span>
+                  <span className="center-amount">
+                    {isIncome ? '+' : '-'}₹{activeSlice.amount.toFixed(2)}
+                  </span>
                   <span className="center-pct" style={{ color: activeSlice.meta.color }}>
                     {activeSlice.percentageFormatted}%
+                  </span>
+                  <span className="center-tx-count">
+                    {activeSlice.transactions.length} {activeSlice.transactions.length === 1 ? 'transaction' : 'transactions'}
                   </span>
                 </>
               ) : (
@@ -266,39 +290,104 @@ export default function ExpensePieChart({
           )}
         </div>
 
-        {/* Legend and breakdown details */}
+        {/* Legend with Nested Transactions List */}
         <div className="pie-legend-container">
           <div className="pie-legend-list">
             {slices.map((slice) => {
               const Icon = slice.meta.icon
               const isHovered = activeCategory === slice.category
+              const isExpanded = !!expandedCategories[slice.category]
 
               return (
                 <div
                   key={slice.category}
-                  className={`pie-legend-item ${isHovered ? 'legend-item-active' : ''}`}
+                  className={`pie-legend-card ${isHovered ? 'legend-item-active' : ''} ${isExpanded ? 'card-expanded' : ''}`}
                   onMouseEnter={() => setActiveCategory(slice.category)}
                   onMouseLeave={() => setActiveCategory(null)}
                 >
-                  <div className="legend-item-left">
-                    <span
-                      className="legend-icon-badge"
-                      style={{
-                        backgroundColor: `${slice.meta.color}25`,
-                        color: slice.meta.color,
-                        borderColor: isHovered ? slice.meta.color : 'transparent',
-                      }}
-                    >
-                      <Icon size={14} />
-                    </span>
-                    <div className="legend-item-labels">
-                      <span className="legend-category-name">{slice.category}</span>
-                      <span className="legend-pct-label">{slice.percentageFormatted}% of total</span>
+                  {/* Card Header Row */}
+                  <div
+                    className="legend-card-header"
+                    onClick={() => toggleCategoryExpand(slice.category)}
+                  >
+                    <div className="legend-item-left">
+                      <span
+                        className="legend-icon-badge"
+                        style={{
+                          backgroundColor: `${slice.meta.color}25`,
+                          color: slice.meta.color,
+                          borderColor: isHovered ? slice.meta.color : 'transparent',
+                        }}
+                      >
+                        <Icon size={14} />
+                      </span>
+                      <div className="legend-item-labels">
+                        <span className="legend-category-name">{slice.category}</span>
+                        <span className="legend-pct-label">
+                          {slice.percentageFormatted}% · {slice.transactions.length} {slice.transactions.length === 1 ? 'tx' : 'txs'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="legend-item-right-wrapper">
+                      <div className="legend-item-right">
+                        <span className="legend-amount">
+                          {isIncome ? '+' : '-'}₹{slice.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="expand-tx-btn"
+                        title={isExpanded ? 'Hide transactions' : 'Show transactions'}
+                      >
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
                     </div>
                   </div>
-                  <div className="legend-item-right">
-                    <span className="legend-amount">₹{slice.amount.toFixed(2)}</span>
-                  </div>
+
+                  {/* Collapsible Transactions Drawer */}
+                  {isExpanded && (
+                    <div className="head-transactions-drawer">
+                      <div className="drawer-header-label">Transactions under {slice.category}:</div>
+                      {slice.transactions.length === 0 ? (
+                        <div className="drawer-empty">No transaction details available</div>
+                      ) : (
+                        <div className="drawer-tx-list">
+                          {slice.transactions.map((tx) => (
+                            <div key={tx.id || `${tx.title}-${tx.date}-${tx.amount}`} className="drawer-tx-row">
+                              <div className="drawer-tx-left">
+                                <span className="drawer-tx-title">{tx.title}</span>
+                                <div className="drawer-tx-meta">
+                                  <span className="meta-tag date-tag">
+                                    <Calendar size={10} />
+                                    {tx.date}
+                                  </span>
+                                  <span className="meta-tag method-tag">
+                                    {tx.paymentMethod === 'bank' ? (
+                                      <>
+                                        <CreditCard size={10} />
+                                        Online {tx.bankName ? `(${tx.bankName})` : ''}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Banknote size={10} />
+                                        Cash
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="drawer-tx-right">
+                                <span className={`drawer-tx-amount ${isIncome ? 'text-green' : 'text-red'}`}>
+                                  {isIncome ? '+' : '-'}₹{Number(tx.amount).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
