@@ -268,11 +268,15 @@ export default function Home() {
           totalAmount={totalIncome}
         />
 
-        {/* Consolidated Cash Flow (Income vs Expenses) Pie Chart */}
+        {/* Consolidated Income & Expense Heads Pie Chart */}
         <ConsolidatedPieChart
+          categoryTotals={categoryTotals}
+          incomeCategoryTotals={incomeCategoryTotals}
+          getCategoryMeta={getCategoryMeta}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           netBalance={netBalance}
+          title="Consolidated Income & Expense Heads"
         />
 
         {/* Main dashboard grid */}
