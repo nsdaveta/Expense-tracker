@@ -92,12 +92,6 @@ function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx,
   }
 }
 
-// Truncate a long label to fit in a slim slice arc label
-function truncateLabel(str, maxLen = 12) {
-  if (!str) return ''
-  return str.length > maxLen ? str.slice(0, maxLen - 1) + '\u2026' : str
-}
-
 // Function to generate an open arc path for outer border brackets
 function createOuterArcPath(startPercent, endPercent, radius, cx, cy) {
   const pStart = Math.max(0, startPercent + 0.006)
@@ -472,24 +466,22 @@ export default function ConsolidatedPieChart({
               })
             )}
 
-            {/* Transaction labels rendered inside each slice (at ~75% of outerRadius) */}
+            {/* Transaction labels along the pie's outer boundary, below the INCOME/EXPENDITURES ring */}
             {slices.map((slice) =>
               slice.subSlices
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  // Only label slices wide enough to hold text
-                  if (spanDeg < 8) return null
-                  const labelRadius = innerRadius > 0
-                    ? innerRadius + (outerRadius - innerRadius) * 0.62
-                    : outerRadius * 0.65
+                  const isSmallSlice = spanDeg < 10
+                  const orientation = isSmallSlice ? 'radial' : 'tangential'
+                  const labelRadius = outerRadius + (isSmallSlice ? 15 : 9)
                   const { labelX, labelY, angleDeg } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
                     labelRadius,
                     cx,
                     cy,
-                    spanDeg < 18 ? 'radial' : 'tangential'
+                    orientation
                   )
                   return (
                     <g
@@ -498,11 +490,11 @@ export default function ConsolidatedPieChart({
                     >
                       <text
                         className="tx-arc-label"
-                        style={{ fill: sub.color, opacity: 0.92 }}
+                        style={{ fill: sub.color }}
                         textAnchor="middle"
                         dominantBaseline="central"
                       >
-                        {truncateLabel(sub.tx.title)}
+                        {sub.tx.title}
                       </text>
                     </g>
                   )
