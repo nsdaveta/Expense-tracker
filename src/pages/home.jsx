@@ -251,9 +251,20 @@ export default function Home() {
 
         {/* Expense Heads Pie Chart */}
         <ExpensePieChart
+          title="Expense Heads Breakdown"
+          type="expense"
           categoryTotals={categoryTotals}
           getCategoryMeta={getCategoryMeta}
-          totalExpense={totalExpense}
+          totalAmount={totalExpense}
+        />
+
+        {/* Income Sources Pie Chart */}
+        <ExpensePieChart
+          title="Income Sources Breakdown"
+          type="income"
+          categoryTotals={incomeCategoryTotals}
+          getCategoryMeta={getCategoryMeta}
+          totalAmount={totalIncome}
         />
 
         {/* Main dashboard grid */}

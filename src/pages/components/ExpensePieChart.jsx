@@ -1,5 +1,9 @@
 import React, { useState } from 'react'
-import { PieChart as PieIcon, Info } from 'lucide-react'
+import {
+  PieChart as PieIcon,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
 import './ExpensePieChart.css'
 
 // Helper function to build SVG arc path
@@ -69,31 +73,54 @@ function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx,
   }
 }
 
-export default function ExpensePieChart({ categoryTotals, getCategoryMeta, totalExpense }) {
+export default function ExpensePieChart({
+  categoryTotals = {},
+  getCategoryMeta,
+  totalExpense,
+  totalAmount,
+  type = 'expense', // 'expense' | 'income'
+  title,
+}) {
   const [activeCategory, setActiveCategory] = useState(null)
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
+
+  const isIncome = type === 'income'
+  const defaultTitle = isIncome ? 'Income Sources Breakdown' : 'Expense Heads Breakdown'
+  const displayTitle = title || defaultTitle
 
   const categories = Object.entries(categoryTotals)
     .filter(([_, amount]) => amount > 0)
     .sort((a, b) => b[1] - a[1])
 
-  const total = totalExpense || categories.reduce((sum, [_, amt]) => sum + amt, 0)
+  const effectiveTotal = totalAmount !== undefined
+    ? totalAmount
+    : (totalExpense !== undefined ? totalExpense : categories.reduce((sum, [_, amt]) => sum + amt, 0))
 
-  if (categories.length === 0 || total === 0) {
+  const HeaderIcon = isIncome ? TrendingUp : TrendingDown
+
+  if (categories.length === 0 || effectiveTotal === 0) {
     return (
       <div className="pie-chart-card empty-card">
         <div className="pie-chart-header">
           <div className="pie-header-title">
-            <PieIcon size={18} className="pie-icon-header" />
-            <span className="section-title">Expense Heads Breakdown</span>
+            <div className={`pie-icon-badge ${isIncome ? 'badge-income' : 'badge-expense'}`}>
+              <HeaderIcon size={16} />
+            </div>
+            <span className="section-title">{displayTitle}</span>
           </div>
         </div>
         <div className="pie-empty-state">
           <div className="empty-chart-placeholder">
-            <PieIcon size={40} className="empty-chart-icon" />
+            <PieIcon size={38} className="empty-chart-icon" />
           </div>
-          <p className="empty-msg">No expense transactions recorded yet.</p>
-          <span className="empty-subtext">Add an expense to view your expense heads distribution chart.</span>
+          <p className="empty-msg">
+            {isIncome ? 'No income transactions recorded yet.' : 'No expense transactions recorded yet.'}
+          </p>
+          <span className="empty-subtext">
+            {isIncome
+              ? 'Add income to view your income sources distribution chart.'
+              : 'Add an expense to view your expense heads distribution chart.'}
+          </span>
         </div>
       </div>
     )
@@ -102,7 +129,7 @@ export default function ExpensePieChart({ categoryTotals, getCategoryMeta, total
   // Calculate cumulative percentages
   let cumulativePercent = 0
   const slices = categories.map(([category, amount]) => {
-    const percent = amount / total
+    const percent = amount / effectiveTotal
     const startPercent = cumulativePercent
     cumulativePercent += percent
     const meta = getCategoryMeta(category)
@@ -129,8 +156,10 @@ export default function ExpensePieChart({ categoryTotals, getCategoryMeta, total
     <div className="pie-chart-card">
       <div className="pie-chart-header">
         <div className="pie-header-title">
-          <PieIcon size={18} className="pie-icon-header" />
-          <span className="section-title">Expense Heads Breakdown</span>
+          <div className={`pie-icon-badge ${isIncome ? 'badge-income' : 'badge-expense'}`}>
+            <HeaderIcon size={16} />
+          </div>
+          <span className="section-title">{displayTitle}</span>
         </div>
         <div className="chart-mode-toggle">
           <button
@@ -161,14 +190,14 @@ export default function ExpensePieChart({ categoryTotals, getCategoryMeta, total
             onMouseLeave={() => setActiveCategory(null)}
           >
             <defs>
-              <filter id="pie-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <filter id={`pie-glow-${type}`} x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
               {slices.map((slice) => (
                 <linearGradient
-                  key={`grad-${slice.category}`}
-                  id={`grad-${slice.category.replace(/\s+/g, '-')}`}
+                  key={`grad-${type}-${slice.category}`}
+                  id={`grad-${type}-${slice.category.replace(/\s+/g, '-')}`}
                   x1="0%"
                   y1="0%"
                   x2="100%"
@@ -198,12 +227,12 @@ export default function ExpensePieChart({ categoryTotals, getCategoryMeta, total
                 <path
                   key={slice.category}
                   d={path}
-                  fill={`url(#grad-${slice.category.replace(/\s+/g, '-')})`}
+                  fill={`url(#grad-${type}-${slice.category.replace(/\s+/g, '-')})`}
                   stroke="var(--bg-card)"
                   strokeWidth="2.5"
                   className={`pie-slice ${isHovered ? 'slice-active' : ''}`}
                   onMouseEnter={() => setActiveCategory(slice.category)}
-                  filter={isHovered ? 'url(#pie-glow)' : 'none'}
+                  filter={isHovered ? `url(#pie-glow-${type})` : 'none'}
                 />
               )
             })}
@@ -224,9 +253,13 @@ export default function ExpensePieChart({ categoryTotals, getCategoryMeta, total
                 </>
               ) : (
                 <>
-                  <span className="center-subtitle">Total Spent</span>
-                  <span className="center-amount">₹{total.toFixed(2)}</span>
-                  <span className="center-heads-count">{slices.length} {slices.length === 1 ? 'Head' : 'Heads'}</span>
+                  <span className="center-subtitle">{isIncome ? 'Total Income' : 'Total Spent'}</span>
+                  <span className={`center-amount ${isIncome ? 'text-green' : ''}`}>
+                    {isIncome ? '+' : ''}₹{effectiveTotal.toFixed(2)}
+                  </span>
+                  <span className="center-heads-count">
+                    {slices.length} {isIncome ? (slices.length === 1 ? 'Source' : 'Sources') : (slices.length === 1 ? 'Head' : 'Heads')}
+                  </span>
                 </>
               )}
             </div>
