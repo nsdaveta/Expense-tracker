@@ -133,19 +133,17 @@
   text-align: center;
   pointer-events: none;
   width: 100%;
-  max-width: 105px;
+  max-width: 125px;
   padding: 0.2rem;
 }
 
 .center-subtitle {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-dim);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
@@ -153,13 +151,10 @@
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-main);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   line-height: 1.2;
   margin-top: 0.15rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .center-pct {
