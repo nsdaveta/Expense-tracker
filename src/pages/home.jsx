@@ -30,6 +30,7 @@ import {
   deleteTransaction,
 } from '../lib/api'
 import ExpensePieChart from './components/ExpensePieChart'
+import ConsolidatedPieChart from './components/ConsolidatedPieChart'
 import './home.css'
 
 // ── category → icon / color mapping ────────────────────────────────────────
@@ -265,6 +266,13 @@ export default function Home() {
           categoryTotals={incomeCategoryTotals}
           getCategoryMeta={getCategoryMeta}
           totalAmount={totalIncome}
+        />
+
+        {/* Consolidated Cash Flow (Income vs Expenses) Pie Chart */}
+        <ConsolidatedPieChart
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          netBalance={netBalance}
         />
 
         {/* Main dashboard grid */}
