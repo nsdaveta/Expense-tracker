@@ -29,6 +29,7 @@ import {
   createTransaction,
   deleteTransaction,
 } from '../lib/api'
+import ExpensePieChart from './components/ExpensePieChart'
 import './home.css'
 
 // ── category → icon / color mapping ────────────────────────────────────────
@@ -247,6 +248,13 @@ export default function Home() {
             </span>
           </div>
         </div>
+
+        {/* Expense Heads Pie Chart */}
+        <ExpensePieChart
+          categoryTotals={categoryTotals}
+          getCategoryMeta={getCategoryMeta}
+          totalExpense={totalExpense}
+        />
 
         {/* Main dashboard grid */}
         <div className="dashboard-grid">
