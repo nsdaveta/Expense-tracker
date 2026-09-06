@@ -70,6 +70,32 @@ function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx,
   }
 }
 
+// Function to generate an open arc path for outer border brackets & textPaths
+function createOuterArcPath(startPercent, endPercent, radius, cx, cy, clockwise = true) {
+  // Add small padding to avoid overlapping the exact boundary tips
+  const pStart = Math.max(0, startPercent + 0.008)
+  const pEnd = Math.min(1, endPercent - 0.008)
+
+  if (pEnd <= pStart) return ''
+
+  const [startX, startY] = getCoordinatesForPercent(pStart - 0.25)
+  const [endX, endY] = getCoordinatesForPercent(pEnd - 0.25)
+
+  const sx = cx + radius * startX
+  const sy = cy + radius * startY
+  const ex = cx + radius * endX
+  const ey = cy + radius * endY
+
+  const span = pEnd - pStart
+  const largeArcFlag = span > 0.5 ? 1 : 0
+
+  if (clockwise) {
+    return `M ${sx} ${sy} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${ex} ${ey}`
+  } else {
+    return `M ${ex} ${ey} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${sx} ${sy}`
+  }
+}
+
 export default function ConsolidatedPieChart({
   categoryTotals = {},
   incomeCategoryTotals = {},
@@ -83,14 +109,12 @@ export default function ConsolidatedPieChart({
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
   const [filterType, setFilterType] = useState('all') // 'all' | 'income' | 'expense'
 
-  // Build all heads
-  const allHeads = []
-
-  // Add Income heads
+  // Build grouped Income and Expenditure heads
+  const incomeHeads = []
   Object.entries(incomeCategoryTotals).forEach(([category, amount]) => {
     if (amount > 0) {
       const meta = getCategoryMeta ? getCategoryMeta(category) : { color: '#10b981', icon: TrendingUp }
-      allHeads.push({
+      incomeHeads.push({
         key: `income-${category}`,
         category,
         type: 'income',
@@ -102,12 +126,13 @@ export default function ConsolidatedPieChart({
       })
     }
   })
+  incomeHeads.sort((a, b) => b.amount - a.amount)
 
-  // Add Expenditure heads
+  const expenseHeads = []
   Object.entries(categoryTotals).forEach(([category, amount]) => {
     if (amount > 0) {
       const meta = getCategoryMeta ? getCategoryMeta(category) : { color: '#ef4444', icon: TrendingDown }
-      allHeads.push({
+      expenseHeads.push({
         key: `expense-${category}`,
         category,
         type: 'expense',
@@ -119,6 +144,9 @@ export default function ConsolidatedPieChart({
       })
     }
   })
+  expenseHeads.sort((a, b) => b.amount - a.amount)
+
+  const allHeads = [...incomeHeads, ...expenseHeads]
 
   // Filter based on user selection
   const filteredHeads = allHeads.filter((h) => {
@@ -155,26 +183,72 @@ export default function ConsolidatedPieChart({
 
   // Calculate cumulative slice percentages
   let cumulative = 0
+  let incomeStart = 0
+  let incomeEnd = 0
+  let expenseStart = 0
+  let expenseEnd = 0
+  let hasIncome = false
+  let hasExpense = false
+
   const slices = filteredHeads.map((head) => {
     const percent = head.amount / totalFilteredVolume
     const startPercent = cumulative
     cumulative += percent
+    const endPercent = cumulative
+
+    if (head.type === 'income') {
+      if (!hasIncome) {
+        incomeStart = startPercent
+        hasIncome = true
+      }
+      incomeEnd = endPercent
+    } else if (head.type === 'expense') {
+      if (!hasExpense) {
+        expenseStart = startPercent
+        hasExpense = true
+      }
+      expenseEnd = endPercent
+    }
 
     return {
       ...head,
       percent,
       percentageFormatted: (percent * 100).toFixed(1),
       startPercent,
-      endPercent: cumulative,
+      endPercent,
     }
   })
 
-  const outerRadius = 85
-  const innerRadius = chartMode === 'donut' ? 52 : 0
-  const cx = 100
-  const cy = 100
+  // Geometry dimensions
+  const cx = 130
+  const cy = 130
+  const outerRadius = 76
+  const innerRadius = chartMode === 'donut' ? 48 : 0
+  const bracketRadius = 87
+  const textRadius = 100
 
   const activeSlice = activeHeadKey ? slices.find((s) => s.key === activeHeadKey) : null
+
+  // Outer Arc Paths for circling labels & brackets
+  const incomeBracketPath = hasIncome
+    ? createOuterArcPath(incomeStart, incomeEnd, bracketRadius, cx, cy, true)
+    : ''
+  const expenseBracketPath = hasExpense
+    ? createOuterArcPath(expenseStart, expenseEnd, bracketRadius, cx, cy, true)
+    : ''
+
+  // TextPaths - orienting them so text is readable (clockwise on top/right, counter-clockwise if on bottom)
+  const incomeMidAngle = (incomeStart + incomeEnd) / 2
+  const incomeIsBottom = incomeMidAngle > 0.25 && incomeMidAngle < 0.75
+  const incomeTextPath = hasIncome
+    ? createOuterArcPath(incomeStart, incomeEnd, textRadius, cx, cy, !incomeIsBottom)
+    : ''
+
+  const expenseMidAngle = (expenseStart + expenseEnd) / 2
+  const expenseIsBottom = expenseMidAngle > 0.25 && expenseMidAngle < 0.75
+  const expenseTextPath = hasExpense
+    ? createOuterArcPath(expenseStart, expenseEnd, textRadius, cx, cy, !expenseIsBottom)
+    : ''
 
   return (
     <div className="consolidated-card">
@@ -245,10 +319,10 @@ export default function ConsolidatedPieChart({
 
       <div className="consolidated-content">
         {/* SVG Container */}
-        <div className="consolidated-svg-container">
+        <div className="consolidated-svg-container outer-labeled-container">
           <svg
-            viewBox="0 0 200 200"
-            className="consolidated-svg"
+            viewBox="0 0 260 260"
+            className="consolidated-svg outer-labeled-svg"
             onMouseLeave={() => setActiveHeadKey(null)}
           >
             <defs>
@@ -269,8 +343,17 @@ export default function ConsolidatedPieChart({
                   <stop offset="100%" stopColor={slice.color} stopOpacity="0.75" />
                 </linearGradient>
               ))}
+
+              {/* Text paths for circling labels */}
+              {incomeTextPath && (
+                <path id="path-income-circling-text" d={incomeTextPath} fill="none" />
+              )}
+              {expenseTextPath && (
+                <path id="path-expense-circling-text" d={expenseTextPath} fill="none" />
+              )}
             </defs>
 
+            {/* Slices of Pie */}
             {slices.map((slice) => {
               const isHovered = activeHeadKey === slice.key
               const currentOuterRadius = isHovered ? outerRadius + 4 : outerRadius
@@ -290,13 +373,60 @@ export default function ConsolidatedPieChart({
                   d={path}
                   fill={`url(#grad-head-${slice.key.replace(/\s+/g, '-')})`}
                   stroke="var(--bg-card)"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   className={`consolidated-slice ${isHovered ? 'slice-active' : ''}`}
                   onMouseEnter={() => setActiveHeadKey(slice.key)}
                   filter={isHovered ? 'url(#consolidated-all-glow)' : 'none'}
                 />
               )
             })}
+
+            {/* Outer Circling Bracket Arcs */}
+            {hasIncome && incomeBracketPath && (
+              <path
+                d={incomeBracketPath}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                className="outer-arc-bracket bracket-income"
+              />
+            )}
+            {hasExpense && expenseBracketPath && (
+              <path
+                d={expenseBracketPath}
+                fill="none"
+                stroke="#ef4444"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                className="outer-arc-bracket bracket-expense"
+              />
+            )}
+
+            {/* Circling Outside Text Labels: "INCOME" & "EXPENDITURES" */}
+            {hasIncome && incomeTextPath && (
+              <text className="circling-arc-text text-income">
+                <textPath
+                  href="#path-income-circling-text"
+                  startOffset="50%"
+                  textAnchor="middle"
+                >
+                  ● INCOME
+                </textPath>
+              </text>
+            )}
+
+            {hasExpense && expenseTextPath && (
+              <text className="circling-arc-text text-expense">
+                <textPath
+                  href="#path-expense-circling-text"
+                  startOffset="50%"
+                  textAnchor="middle"
+                >
+                  ● EXPENDITURES
+                </textPath>
+              </text>
+            )}
           </svg>
 
           {/* Center Info in Donut Mode */}
