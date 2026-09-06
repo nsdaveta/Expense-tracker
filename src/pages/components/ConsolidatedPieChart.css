@@ -8,6 +8,7 @@
   box-shadow: var(--shadow-card);
   gap: 1.25rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .consolidated-card:hover {
@@ -81,18 +82,18 @@
 
 .consolidated-content {
   display: grid;
-  grid-template-columns: 290px 1fr;
+  grid-template-columns: 320px 1fr;
   gap: 2rem;
   align-items: center;
   overflow: hidden;
-  padding-top: 0.5rem;
+  transition: padding-top 0.15s ease;
 }
 
 .consolidated-svg-container.outer-labeled-container {
   position: relative;
-  width: 280px;
-  height: 280px;
-  margin: 0 auto;
+  width: 320px;
+  height: 320px;
+  margin: 0.75rem auto 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -398,8 +399,8 @@
   }
 
   .consolidated-svg-container.outer-labeled-container {
-    width: 240px;
-    height: 240px;
+    width: 280px;
+    height: 280px;
   }
 
   .consolidated-heads-grid {

@@ -53,6 +53,51 @@ function isLabelTooWideForArc(text, spanDeg, radius, fontSize) {
   return estimatedTextWidth > arcLength
 }
 
+const TX_LABEL_FONT_SIZE = 7.5
+
+// Figures out how far above the pie's own top edge (viewBox y = 0) the
+// widest label actually reaches, so the card can grow just enough room for
+// it — no more, no less — instead of clipping it or leaving excess empty space.
+function computeTopLabelClearance(slices, outerRadius, cx, cy, fontSize) {
+  let minY = 0
+  slices.forEach((slice) => {
+    slice.subSlices.forEach((sub) => {
+      if (!sub.tx) return
+      const spanDeg = (sub.endPercent - sub.startPercent) * 360
+      const tangentialRadius = outerRadius + 9
+      const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
+      const orientation = isTooWide ? 'radial' : 'tangential'
+      const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
+      const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(
+        sub.startPercent,
+        sub.endPercent,
+        labelRadius,
+        cx,
+        cy,
+        orientation
+      )
+      const textLen = (sub.tx.title?.length || 0) * fontSize * 0.62
+      const rad = (angleDeg * Math.PI) / 180
+      const dx = Math.cos(rad)
+      const dy = Math.sin(rad)
+      let y0 = labelY
+      let y1 = labelY
+      if (anchor === 'start') {
+        y1 = labelY + dy * textLen
+      } else if (anchor === 'end') {
+        y0 = labelY - dy * textLen
+      } else {
+        y0 = labelY - (dy * textLen) / 2
+        y1 = labelY + (dy * textLen) / 2
+      }
+      minY = Math.min(minY, y0, y1)
+    })
+  })
+  if (minY >= 0) return 0
+  // Small buffer for the glyphs' own height around the text baseline.
+  return -minY + fontSize
+}
+
 function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx, cy) {
   const isFullCircle = endPercent - startPercent >= 0.9999
   
@@ -249,6 +294,13 @@ export default function ExpensePieChart({
     ? slices.find((s) => s.category === activeCategory)
     : null
 
+  // Grow the content area's top padding to exactly fit the widest label —
+  // stopping right after its last word — instead of a fixed guess or clipping.
+  const topLabelOverflowUnits = computeTopLabelClearance(slices, outerRadius, cx, cy, TX_LABEL_FONT_SIZE)
+  const svgContainerPx = 260
+  const svgViewBoxUnits = 200
+  const topClearancePx = topLabelOverflowUnits * (svgContainerPx / svgViewBoxUnits)
+
   return (
     <div className="pie-chart-card">
       <div className="pie-chart-header">
@@ -278,7 +330,7 @@ export default function ExpensePieChart({
         </div>
       </div>
 
-      <div className="pie-chart-content">
+      <div className="pie-chart-content" style={{ paddingTop: `${topClearancePx}px` }}>
         {/* SVG Container */}
         <div className="pie-svg-container">
           <svg
@@ -355,7 +407,7 @@ export default function ExpensePieChart({
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
                   const tangentialRadius = outerRadius + 9
-                  const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, 7.5)
+                  const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
                   const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(

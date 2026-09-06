@@ -8,6 +8,7 @@
   box-shadow: var(--shadow-card);
   gap: 1.25rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .pie-chart-card:hover {
@@ -86,18 +87,18 @@
 
 .pie-chart-content {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 2rem;
   align-items: center;
   overflow: hidden;
-  padding-top: 0.5rem;
+  transition: padding-top 0.15s ease;
 }
 
 .pie-svg-container {
   position: relative;
-  width: 220px;
-  height: 220px;
-  margin: 0 auto;
+  width: 260px;
+  height: 260px;
+  margin: 0.75rem auto 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -460,8 +461,8 @@
   }
   
   .pie-svg-container {
-    width: 200px;
-    height: 200px;
+    width: 230px;
+    height: 230px;
   }
   
   .pie-legend-list {
