@@ -88,6 +88,7 @@ export default function ExpensePieChart({
   expenses = [],
 }) {
   const [activeCategory, setActiveCategory] = useState(null)
+  const [activeTxKey, setActiveTxKey] = useState(null)
   const [expandedCategories, setExpandedCategories] = useState({})
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
 
@@ -152,6 +153,42 @@ export default function ExpensePieChart({
       (tx) => tx.type === type && tx.category === category
     )
 
+    // Split this category's arc into one sub-slice per transaction so the
+    // pie visually reflects individual transactions, not just the category total.
+    let txCumulative = startPercent
+    const subSlices = headTransactions.map((tx, idx) => {
+      const txPercent = Number(tx.amount) / effectiveTotal
+      const txStartPercent = txCumulative
+      txCumulative += txPercent
+      return {
+        key: `${category}__${tx.id ?? idx}`,
+        category,
+        meta,
+        tx,
+        idx,
+        percent: txPercent,
+        startPercent: txStartPercent,
+        endPercent: txCumulative,
+      }
+    })
+    // Snap the last sub-slice's end to the category's precise end to avoid
+    // floating-point gaps between category boundaries.
+    if (subSlices.length > 0) {
+      subSlices[subSlices.length - 1].endPercent = cumulativePercent
+    } else {
+      // Fallback: no matching transaction records, still render the category as one slice.
+      subSlices.push({
+        key: `${category}__whole`,
+        category,
+        meta,
+        tx: null,
+        idx: 0,
+        percent,
+        startPercent,
+        endPercent: cumulativePercent,
+      })
+    }
+
     return {
       category,
       amount,
@@ -161,6 +198,7 @@ export default function ExpensePieChart({
       endPercent: cumulativePercent,
       meta,
       transactions: headTransactions,
+      subSlices,
     }
   })
 
@@ -169,7 +207,12 @@ export default function ExpensePieChart({
   const cx = 100
   const cy = 100
 
-  const activeSlice = activeCategory ? slices.find((s) => s.category === activeCategory) : null
+  const activeTx = activeTxKey
+    ? slices.flatMap((s) => s.subSlices).find((sub) => sub.key === activeTxKey)
+    : null
+  const activeSlice = !activeTx && activeCategory
+    ? slices.find((s) => s.category === activeCategory)
+    : null
 
   return (
     <div className="pie-chart-card">
@@ -206,7 +249,10 @@ export default function ExpensePieChart({
           <svg
             viewBox="0 0 200 200"
             className="pie-svg"
-            onMouseLeave={() => setActiveCategory(null)}
+            onMouseLeave={() => {
+              setActiveCategory(null)
+              setActiveTxKey(null)
+            }}
           >
             <defs>
               <filter id={`pie-glow-${type}`} x="-20%" y="-20%" width="140%" height="140%">
@@ -228,39 +274,63 @@ export default function ExpensePieChart({
               ))}
             </defs>
 
-            {/* Slices */}
-            {slices.map((slice) => {
-              const isHovered = activeCategory === slice.category
-              const currentOuterRadius = isHovered ? outerRadius + 4 : outerRadius
-              const currentInnerRadius = isHovered && innerRadius > 0 ? innerRadius - 2 : innerRadius
-              const path = createSlicePath(
-                slice.startPercent,
-                slice.endPercent,
-                currentOuterRadius,
-                currentInnerRadius,
-                cx,
-                cy
-              )
+            {/* Slices — one sub-slice per transaction within each category */}
+            {slices.map((slice) =>
+              slice.subSlices.map((sub) => {
+                const isCategoryHovered = !activeTxKey && activeCategory === slice.category
+                const isThisTxHovered = activeTxKey === sub.key
+                const isHovered = isCategoryHovered || isThisTxHovered
+                const currentOuterRadius = isHovered ? outerRadius + 4 : outerRadius
+                const currentInnerRadius = isHovered && innerRadius > 0 ? innerRadius - 2 : innerRadius
+                const path = createSlicePath(
+                  sub.startPercent,
+                  sub.endPercent,
+                  currentOuterRadius,
+                  currentInnerRadius,
+                  cx,
+                  cy
+                )
+                // Vary opacity slightly across a category's own transactions so
+                // individual sub-slices stay visually distinguishable.
+                const fillOpacity = Math.max(0.55, 1 - sub.idx * 0.12)
 
-              return (
-                <path
-                  key={slice.category}
-                  d={path}
-                  fill={`url(#grad-${type}-${slice.category.replace(/\s+/g, '-')})`}
-                  stroke="var(--bg-card)"
-                  strokeWidth="2.5"
-                  className={`pie-slice ${isHovered ? 'slice-active' : ''}`}
-                  onMouseEnter={() => setActiveCategory(slice.category)}
-                  filter={isHovered ? `url(#pie-glow-${type})` : 'none'}
-                />
-              )
-            })}
+                return (
+                  <path
+                    key={sub.key}
+                    d={path}
+                    fill={`url(#grad-${type}-${slice.category.replace(/\s+/g, '-')})`}
+                    fillOpacity={fillOpacity}
+                    stroke="var(--bg-card)"
+                    strokeWidth="1.5"
+                    className={`pie-slice ${isHovered ? 'slice-active' : ''}`}
+                    onMouseEnter={() => {
+                      setActiveCategory(slice.category)
+                      setActiveTxKey(sub.key)
+                    }}
+                    filter={isHovered ? `url(#pie-glow-${type})` : 'none'}
+                  />
+                )
+              })
+            )}
           </svg>
 
           {/* Center Info in Donut Mode */}
           {chartMode === 'donut' && (
             <div className="pie-center-info">
-              {activeSlice ? (
+              {activeTx && activeTx.tx ? (
+                <>
+                  <span className="center-subtitle" style={{ color: activeTx.meta.color }}>
+                    {activeTx.tx.title}
+                  </span>
+                  <span className="center-amount">
+                    {isIncome ? '+' : '-'}₹{Number(activeTx.tx.amount).toFixed(2)}
+                  </span>
+                  <span className="center-pct" style={{ color: activeTx.meta.color }}>
+                    {(activeTx.percent * 100).toFixed(1)}%
+                  </span>
+                  <span className="center-tx-count">{activeTx.tx.date}</span>
+                </>
+              ) : activeSlice ? (
                 <>
                   <span className="center-subtitle" style={{ color: activeSlice.meta.color }}>
                     {activeSlice.category}
@@ -302,7 +372,10 @@ export default function ExpensePieChart({
                 <div
                   key={slice.category}
                   className={`pie-legend-card ${isHovered ? 'legend-item-active' : ''} ${isExpanded ? 'card-expanded' : ''}`}
-                  onMouseEnter={() => setActiveCategory(slice.category)}
+                  onMouseEnter={() => {
+                    setActiveCategory(slice.category)
+                    setActiveTxKey(null)
+                  }}
                   onMouseLeave={() => setActiveCategory(null)}
                 >
                   {/* Card Header Row */}

@@ -107,6 +107,7 @@ export default function ConsolidatedPieChart({
   expenses = [],
 }) {
   const [activeHeadKey, setActiveHeadKey] = useState(null)
+  const [activeTxKey, setActiveTxKey] = useState(null)
   const [expandedHeads, setExpandedHeads] = useState({})
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
   const [filterType, setFilterType] = useState('all') // 'all' | 'income' | 'expense'
@@ -227,12 +228,47 @@ export default function ConsolidatedPieChart({
       expenseEnd = endPercent
     }
 
+    // Split this head's arc into one sub-slice per transaction so the pie
+    // visually reflects individual transactions, not just the head total.
+    let txCumulative = startPercent
+    const subSlices = head.transactions.map((tx, idx) => {
+      const txPercent = Number(tx.amount) / totalFilteredVolume
+      const txStartPercent = txCumulative
+      txCumulative += txPercent
+      return {
+        key: `${head.key}__${tx.id ?? idx}`,
+        headKey: head.key,
+        color: head.color,
+        tx,
+        idx,
+        percent: txPercent,
+        startPercent: txStartPercent,
+        endPercent: txCumulative,
+      }
+    })
+    if (subSlices.length > 0) {
+      subSlices[subSlices.length - 1].endPercent = endPercent
+    } else {
+      // Fallback: no matching transaction records, still render the head as one slice.
+      subSlices.push({
+        key: `${head.key}__whole`,
+        headKey: head.key,
+        color: head.color,
+        tx: null,
+        idx: 0,
+        percent,
+        startPercent,
+        endPercent,
+      })
+    }
+
     return {
       ...head,
       percent,
       percentageFormatted: (percent * 100).toFixed(1),
       startPercent,
       endPercent,
+      subSlices,
     }
   })
 
@@ -244,7 +280,12 @@ export default function ConsolidatedPieChart({
   const bracketRadius = 106
   const textRadius = 122
 
-  const activeSlice = activeHeadKey ? slices.find((s) => s.key === activeHeadKey) : null
+  const activeTx = activeTxKey
+    ? slices.flatMap((s) => s.subSlices).find((sub) => sub.key === activeTxKey)
+    : null
+  const activeSlice = !activeTx && activeHeadKey
+    ? slices.find((s) => s.key === activeHeadKey)
+    : null
 
   // Outer Arc Paths for circling brackets
   const incomeBracketPath = hasIncome
@@ -346,7 +387,10 @@ export default function ConsolidatedPieChart({
           <svg
             viewBox="0 0 280 280"
             className="consolidated-svg outer-labeled-svg"
-            onMouseLeave={() => setActiveHeadKey(null)}
+            onMouseLeave={() => {
+              setActiveHeadKey(null)
+              setActiveTxKey(null)
+            }}
           >
             <defs>
               <filter id="consolidated-all-glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -368,33 +412,42 @@ export default function ConsolidatedPieChart({
               ))}
             </defs>
 
-            {/* Slices of Pie */}
-            {slices.map((slice) => {
-              const isHovered = activeHeadKey === slice.key
-              const currentOuterRadius = isHovered ? outerRadius + 4 : outerRadius
-              const currentInnerRadius = isHovered && innerRadius > 0 ? innerRadius - 2 : innerRadius
-              const path = createSlicePath(
-                slice.startPercent,
-                slice.endPercent,
-                currentOuterRadius,
-                currentInnerRadius,
-                cx,
-                cy
-              )
+            {/* Slices of Pie — one sub-slice per transaction within each head */}
+            {slices.map((slice) =>
+              slice.subSlices.map((sub) => {
+                const isHeadHovered = !activeTxKey && activeHeadKey === slice.key
+                const isThisTxHovered = activeTxKey === sub.key
+                const isHovered = isHeadHovered || isThisTxHovered
+                const currentOuterRadius = isHovered ? outerRadius + 4 : outerRadius
+                const currentInnerRadius = isHovered && innerRadius > 0 ? innerRadius - 2 : innerRadius
+                const path = createSlicePath(
+                  sub.startPercent,
+                  sub.endPercent,
+                  currentOuterRadius,
+                  currentInnerRadius,
+                  cx,
+                  cy
+                )
+                const fillOpacity = Math.max(0.55, 1 - sub.idx * 0.12)
 
-              return (
-                <path
-                  key={slice.key}
-                  d={path}
-                  fill={`url(#grad-head-${slice.key.replace(/\s+/g, '-')})`}
-                  stroke="var(--bg-card)"
-                  strokeWidth="2"
-                  className={`consolidated-slice ${isHovered ? 'slice-active' : ''}`}
-                  onMouseEnter={() => setActiveHeadKey(slice.key)}
-                  filter={isHovered ? 'url(#consolidated-all-glow)' : 'none'}
-                />
-              )
-            })}
+                return (
+                  <path
+                    key={sub.key}
+                    d={path}
+                    fill={`url(#grad-head-${slice.key.replace(/\s+/g, '-')})`}
+                    fillOpacity={fillOpacity}
+                    stroke="var(--bg-card)"
+                    strokeWidth="1.5"
+                    className={`consolidated-slice ${isHovered ? 'slice-active' : ''}`}
+                    onMouseEnter={() => {
+                      setActiveHeadKey(slice.key)
+                      setActiveTxKey(sub.key)
+                    }}
+                    filter={isHovered ? 'url(#consolidated-all-glow)' : 'none'}
+                  />
+                )
+              })
+            )}
 
             {/* Outer Circling Bracket Arcs */}
             {hasIncome && incomeBracketPath && (
@@ -447,7 +500,20 @@ export default function ConsolidatedPieChart({
           {/* Center Info in Donut Mode */}
           {chartMode === 'donut' && (
             <div className="consolidated-center-info">
-              {activeSlice ? (
+              {activeTx && activeTx.tx ? (
+                <>
+                  <span className="center-subtitle" style={{ color: activeTx.color }}>
+                    {activeTx.tx.title}
+                  </span>
+                  <span className="center-amount">
+                    {activeTx.tx.type === 'income' ? '+' : '-'}₹{Number(activeTx.tx.amount).toFixed(2)}
+                  </span>
+                  <span className="center-pct" style={{ color: activeTx.color }}>
+                    {(activeTx.percent * 100).toFixed(1)}%
+                  </span>
+                  <span className="center-tx-count">{activeTx.tx.date}</span>
+                </>
+              ) : activeSlice ? (
                 <>
                   <span className="center-subtitle" style={{ color: activeSlice.color }}>
                     {activeSlice.category}
@@ -492,7 +558,10 @@ export default function ConsolidatedPieChart({
                 <div
                   key={slice.key}
                   className={`consolidated-head-card ${isHovered ? 'head-item-active' : ''} ${isExpanded ? 'card-expanded' : ''}`}
-                  onMouseEnter={() => setActiveHeadKey(slice.key)}
+                  onMouseEnter={() => {
+                    setActiveHeadKey(slice.key)
+                    setActiveTxKey(null)
+                  }}
                   onMouseLeave={() => setActiveHeadKey(null)}
                 >
                   {/* Card Header Row */}
