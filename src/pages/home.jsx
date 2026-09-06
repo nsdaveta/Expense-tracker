@@ -268,7 +268,7 @@ export default function Home() {
           totalAmount={totalIncome}
         />
 
-        {/* Consolidated Income & Expense Heads Pie Chart */}
+        {/* Consolidated Income & Expenditures Pie Chart */}
         <ConsolidatedPieChart
           categoryTotals={categoryTotals}
           incomeCategoryTotals={incomeCategoryTotals}
@@ -276,7 +276,7 @@ export default function Home() {
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           netBalance={netBalance}
-          title="Consolidated Income & Expense Heads"
+          title="Consolidated Income & Expenditures"
         />
 
         {/* Main dashboard grid */}

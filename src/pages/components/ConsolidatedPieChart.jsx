@@ -4,7 +4,6 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
-  Wallet,
 } from 'lucide-react'
 import './ConsolidatedPieChart.css'
 
@@ -78,7 +77,7 @@ export default function ConsolidatedPieChart({
   totalIncome = 0,
   totalExpense = 0,
   netBalance = 0,
-  title = 'Consolidated Income & Expense Heads',
+  title = 'Consolidated Income & Expenditures',
 }) {
   const [activeHeadKey, setActiveHeadKey] = useState(null)
   const [chartMode, setChartMode] = useState('donut') // 'donut' or 'pie'
@@ -95,6 +94,7 @@ export default function ConsolidatedPieChart({
         key: `income-${category}`,
         category,
         type: 'income',
+        typeLabel: 'Income',
         amount: Number(amount),
         meta,
         color: meta.color || '#10b981',
@@ -103,7 +103,7 @@ export default function ConsolidatedPieChart({
     }
   })
 
-  // Add Expense heads
+  // Add Expenditure heads
   Object.entries(categoryTotals).forEach(([category, amount]) => {
     if (amount > 0) {
       const meta = getCategoryMeta ? getCategoryMeta(category) : { color: '#ef4444', icon: TrendingDown }
@@ -111,6 +111,7 @@ export default function ConsolidatedPieChart({
         key: `expense-${category}`,
         category,
         type: 'expense',
+        typeLabel: 'Expenditure',
         amount: Number(amount),
         meta,
         color: meta.color || '#ef4444',
@@ -127,7 +128,6 @@ export default function ConsolidatedPieChart({
   })
 
   const totalFilteredVolume = filteredHeads.reduce((sum, h) => sum + h.amount, 0)
-  const grandCashFlow = totalIncome + totalExpense
 
   if (allHeads.length === 0 || totalFilteredVolume === 0) {
     return (
@@ -146,7 +146,7 @@ export default function ConsolidatedPieChart({
           </div>
           <p className="empty-msg">No transactions recorded yet.</p>
           <span className="empty-subtext">
-            Add income or expense transactions to view your consolidated heads distribution chart.
+            Add income or expenditure transactions to view your consolidated chart.
           </span>
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function ConsolidatedPieChart({
                 setActiveHeadKey(null)
               }}
             >
-              Expenses
+              Expenditures
             </button>
           </div>
 
@@ -308,7 +308,7 @@ export default function ConsolidatedPieChart({
                     {activeSlice.category}
                   </span>
                   <span className={`center-type-tag ${activeSlice.type === 'income' ? 'tag-income' : 'tag-expense'}`}>
-                    {activeSlice.type === 'income' ? 'Income Head' : 'Expense Head'}
+                    {activeSlice.typeLabel}
                   </span>
                   <span className="center-amount">
                     {activeSlice.type === 'income' ? '+' : '-'}₹{activeSlice.amount.toFixed(2)}
@@ -361,11 +361,11 @@ export default function ConsolidatedPieChart({
                       <div className="head-item-title-row">
                         <span className="head-category-name">{slice.category}</span>
                         <span className={`head-type-pill ${slice.type === 'income' ? 'pill-income' : 'pill-expense'}`}>
-                          {slice.type}
+                          {slice.typeLabel}
                         </span>
                       </div>
                       <span className="head-pct-label">
-                        {slice.percentageFormatted}% of {filterType === 'all' ? 'total volume' : filterType}
+                        {slice.percentageFormatted}% of {filterType === 'all' ? 'total flow' : (filterType === 'income' ? 'income' : 'expenditures')}
                       </span>
                     </div>
                   </div>
@@ -387,12 +387,12 @@ export default function ConsolidatedPieChart({
             </div>
             <div className="summary-bar-divider" />
             <div className="summary-bar-pill">
-              <span className="summary-bar-label">Expenses:</span>
+              <span className="summary-bar-label">Expenditures:</span>
               <span className="text-red font-bold">-₹{totalExpense.toFixed(2)}</span>
             </div>
             <div className="summary-bar-divider" />
             <div className="summary-bar-pill">
-              <span className="summary-bar-label">Net:</span>
+              <span className="summary-bar-label">Net Balance:</span>
               <span className={`${netBalance >= 0 ? 'text-green' : 'text-red'} font-bold`}>
                 ₹{netBalance.toFixed(2)}
               </span>
