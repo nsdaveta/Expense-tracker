@@ -134,7 +134,7 @@
   font-family: inherit;
   font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   pointer-events: none;
   user-select: none;
@@ -148,6 +148,7 @@
   fill: #ef4444;
 }
 
+/* Center Text Area */
 .consolidated-center-info {
   position: absolute;
   top: 50%;
@@ -159,16 +160,31 @@
   justify-content: center;
   text-align: center;
   pointer-events: none;
-  max-width: 110px;
+  width: 100%;
+  max-width: 95px;
+  padding: 0.2rem;
+}
+
+.center-subtitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .center-type-tag {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 0.1rem 0.4rem;
+  padding: 0.08rem 0.35rem;
   border-radius: var(--radius-full);
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
+  white-space: nowrap;
 }
 
 .tag-income {
@@ -181,6 +197,31 @@
   color: var(--danger);
 }
 
+.center-amount {
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 0.12rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.center-pct {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 0.08rem;
+}
+
+.center-flow-count {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* Details and Heads Grid */
 .consolidated-details-container {
   display: flex;
@@ -191,9 +232,9 @@
 
 .consolidated-heads-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
   gap: 0.65rem;
-  max-height: 260px;
+  max-height: 250px;
   overflow-y: auto;
   padding-right: 0.4rem;
 }
@@ -208,7 +249,8 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
 .consolidated-head-item:hover,
@@ -222,20 +264,22 @@
 .head-item-left {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   min-width: 0;
+  flex: 1;
 }
 
 .head-item-meta {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 
 .head-item-title-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   min-width: 0;
 }
 
@@ -246,14 +290,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100px;
 }
 
 .head-type-pill {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: capitalize;
   padding: 0.05rem 0.35rem;
   border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .pill-income {
@@ -270,15 +317,18 @@
   font-size: 0.68rem;
   color: var(--text-dim);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .head-item-right {
   flex-shrink: 0;
+  text-align: right;
 }
 
 .head-amount {
   font-size: 0.85rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 /* Quick summary bar at the bottom of the card */
@@ -286,17 +336,20 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0.6rem 0.9rem;
+  padding: 0.65rem 0.9rem;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-size: 0.78rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
 }
 
 .summary-bar-pill {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  white-space: nowrap;
 }
 
 .summary-bar-label {
@@ -342,5 +395,9 @@
   .consolidated-heads-grid {
     grid-template-columns: 1fr;
     max-height: 220px;
+  }
+
+  .summary-bar-divider {
+    display: none;
   }
 }
