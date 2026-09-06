@@ -18,6 +18,25 @@ function getCoordinatesForPercent(percent) {
   return [x, y]
 }
 
+// Computes position + rotation for a label that curves along the pie's
+// boundary at the midpoint angle of a given percent range.
+function getArcLabelTransform(startPercent, endPercent, radius, cx, cy) {
+  const midPercent = (startPercent + endPercent) / 2
+  const [midX, midY] = getCoordinatesForPercent(midPercent - 0.25)
+  const labelX = cx + radius * midX
+  const labelY = cy + radius * midY
+  let angleDeg = ((midPercent - 0.25) * 360) + 90
+  if (angleDeg > 90 && angleDeg < 270) {
+    angleDeg -= 180
+  }
+  return { labelX, labelY, angleDeg }
+}
+
+function truncateLabel(text, maxLen = 10) {
+  if (!text) return ''
+  return text.length > maxLen ? `${text.slice(0, maxLen - 1)}…` : text
+}
+
 function createSlicePath(startPercent, endPercent, outerRadius, innerRadius, cx, cy) {
   const isFullCircle = endPercent - startPercent >= 0.9999
 
@@ -447,6 +466,36 @@ export default function ConsolidatedPieChart({
                   />
                 )
               })
+            )}
+
+            {/* Transaction labels along the pie's outer boundary, below the INCOME/EXPENDITURES ring */}
+            {slices.map((slice) =>
+              slice.subSlices
+                .filter((sub) => sub.tx)
+                .map((sub) => {
+                  const { labelX, labelY, angleDeg } = getArcLabelTransform(
+                    sub.startPercent,
+                    sub.endPercent,
+                    outerRadius + 9,
+                    cx,
+                    cy
+                  )
+                  return (
+                    <g
+                      key={`label-${sub.key}`}
+                      transform={`translate(${labelX}, ${labelY}) rotate(${angleDeg})`}
+                    >
+                      <text
+                        className="tx-arc-label"
+                        style={{ fill: sub.color }}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                      >
+                        {truncateLabel(sub.tx.title)}
+                      </text>
+                    </g>
+                  )
+                })
             )}
 
             {/* Outer Circling Bracket Arcs */}
