@@ -73,10 +73,10 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
     slice.subSlices.forEach((sub) => {
       if (!sub.tx) return
       const spanDeg = (sub.endPercent - sub.startPercent) * 360
-      const tangentialRadius = outerRadius + 2
+      const tangentialRadius = outerRadius + 18
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
-      const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
+      const labelRadius = isTooWide ? outerRadius + 18 : tangentialRadius
       const { labelX, labelY, angleDeg, anchor, dyEm } = getArcLabelTransform(
         sub.startPercent,
         sub.endPercent,
@@ -578,10 +578,10 @@ export default function ConsolidatedPieChart({
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const tangentialRadius = outerRadius + 2
+                  const tangentialRadius = outerRadius + 18
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
-                  const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
+                  const labelRadius = isTooWide ? outerRadius + 18 : tangentialRadius
                   const { labelX, labelY, angleDeg, anchor, dyEm } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
