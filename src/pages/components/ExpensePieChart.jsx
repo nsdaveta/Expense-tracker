@@ -22,31 +22,30 @@ function getCoordinatesForPercent(percent) {
 // 'tangential' makes the label curve along the pie's circumference (used for
 // wider slices); 'radial' points the label straight out along the slice's own
 // radius line (slanted), which reads better for slices too thin to fit
-// tangential text.
-function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientation = 'tangential') {
+// tangential text. 'outwardPush' shifts the anchor point further away from
+// the pie's center (in world space, along the true radial direction — so
+// there's no ambiguity from the label's own rotated/flipped orientation)
+// before the label is positioned, so tangential labels clear the colored
+// ring instead of straddling it.
+function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientation = 'tangential', outwardPush = 0) {
   const midPercent = (startPercent + endPercent) / 2
   const [midX, midY] = getCoordinatesForPercent(midPercent - 0.25)
-  const labelX = cx + radius * midX
-  const labelY = cy + radius * midY
   const rawAngleDeg = ((((midPercent - 0.25) * 360) % 360) + 360) % 360
+  const rawRad = (rawAngleDeg * Math.PI) / 180
+  const labelX = cx + radius * midX + Math.cos(rawRad) * outwardPush
+  const labelY = cy + radius * midY + Math.sin(rawRad) * outwardPush
   // Whether the un-offset radial direction points into the lower half of the
   // circle, in which case we flip the rotation 180° to keep text upright.
   const radialFlipped = rawAngleDeg > 90 && rawAngleDeg < 270
   let angleDeg = rawAngleDeg
   if (orientation === 'tangential') angleDeg += 90
   angleDeg = ((angleDeg % 360) + 360) % 360
-  const flipped = angleDeg > 90 && angleDeg < 270
-  if (flipped) angleDeg -= 180
+  if (angleDeg > 90 && angleDeg < 270) angleDeg -= 180
   // For radial labels, anchor the text at its base (nearest the pie) so the
   // whole label extends outward from there — never back over the slices.
   // Which side counts as "base" flips along with the rotation above.
   const anchor = orientation === 'radial' ? (radialFlipped ? 'end' : 'start') : 'middle'
-  // For tangential labels, "central" baseline would straddle the boundary —
-  // half the glyph dipping inward over the colored ring. Nudge the whole
-  // label outward instead so it clears the ring entirely. Which direction
-  // counts as "outward" flips along with the rotation above.
-  const dyEm = orientation === 'tangential' ? (flipped ? 0.75 : -0.75) : 0
-  return { labelX, labelY, angleDeg, anchor, dyEm }
+  return { labelX, labelY, angleDeg, anchor }
 }
 
 // Estimates whether a label's text would spill past its own slice's arc
@@ -77,40 +76,35 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
       const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
-      const { labelX, labelY, angleDeg, anchor, dyEm } = getArcLabelTransform(
+      const outwardPush = orientation === 'tangential' ? fontSize * 0.9 : 0
+      const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(
         sub.startPercent,
         sub.endPercent,
         labelRadius,
         cx,
         cy,
-        orientation
+        orientation,
+        outwardPush
       )
       const textLen = (sub.tx.title?.length || 0) * fontSize * 0.62
       const rad = (angleDeg * Math.PI) / 180
       const dx = Math.cos(rad)
       const dy = Math.sin(rad)
-      // Perpendicular direction (matches the SVG "dy" nudge applied at render
-      // time) so the estimate stays accurate for tangential labels.
-      const perpX = -Math.sin(rad)
-      const perpY = Math.cos(rad)
-      const nudge = dyEm * fontSize
-      const baseX = labelX + perpX * nudge
-      const baseY = labelY + perpY * nudge
-      let x0 = baseX
-      let y0 = baseY
-      let x1 = baseX
-      let y1 = baseY
+      let x0 = labelX
+      let y0 = labelY
+      let x1 = labelX
+      let y1 = labelY
       if (anchor === 'start') {
-        x1 = baseX + dx * textLen
-        y1 = baseY + dy * textLen
+        x1 = labelX + dx * textLen
+        y1 = labelY + dy * textLen
       } else if (anchor === 'end') {
-        x0 = baseX - dx * textLen
-        y0 = baseY - dy * textLen
+        x0 = labelX - dx * textLen
+        y0 = labelY - dy * textLen
       } else {
-        x0 = baseX - (dx * textLen) / 2
-        y0 = baseY - (dy * textLen) / 2
-        x1 = baseX + (dx * textLen) / 2
-        y1 = baseY + (dy * textLen) / 2
+        x0 = labelX - (dx * textLen) / 2
+        y0 = labelY - (dy * textLen) / 2
+        x1 = labelX + (dx * textLen) / 2
+        y1 = labelY + (dy * textLen) / 2
       }
       minX = Math.min(minX, x0, x1)
       maxX = Math.max(maxX, x0, x1)
@@ -447,13 +441,15 @@ export default function ExpensePieChart({
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
-                  const { labelX, labelY, angleDeg, anchor, dyEm } = getArcLabelTransform(
+                  const outwardPush = orientation === 'tangential' ? TX_LABEL_FONT_SIZE * 0.9 : 0
+                  const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
                     labelRadius,
                     cx,
                     cy,
-                    orientation
+                    orientation,
+                    outwardPush
                   )
                   return (
                     <g
@@ -465,7 +461,6 @@ export default function ExpensePieChart({
                         style={{ fill: sub.meta.color }}
                         textAnchor={anchor}
                         dominantBaseline="central"
-                        dy={`${dyEm}em`}
                       >
                         {sub.tx.title}
                       </text>
