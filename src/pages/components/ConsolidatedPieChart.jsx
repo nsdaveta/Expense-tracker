@@ -45,7 +45,7 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   // half the glyph dipping inward over the colored ring. Nudge the whole
   // label outward instead so it clears the ring entirely. Which direction
   // counts as "outward" flips along with the rotation above.
-  const dyEm = orientation === 'tangential' ? (flipped ? 0.62 : -0.62) : 0
+  const dyEm = orientation === 'tangential' ? (flipped ? 0.75 : -0.75) : 0
   return { labelX, labelY, angleDeg, anchor, dyEm }
 }
 
@@ -73,7 +73,7 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
     slice.subSlices.forEach((sub) => {
       if (!sub.tx) return
       const spanDeg = (sub.endPercent - sub.startPercent) * 360
-      const tangentialRadius = outerRadius + 4
+      const tangentialRadius = outerRadius + 2
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
       const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
@@ -578,7 +578,7 @@ export default function ConsolidatedPieChart({
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const tangentialRadius = outerRadius + 4
+                  const tangentialRadius = outerRadius + 2
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius

@@ -45,7 +45,7 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   // half the glyph dipping inward over the colored ring. Nudge the whole
   // label outward instead so it clears the ring entirely. Which direction
   // counts as "outward" flips along with the rotation above.
-  const dyEm = orientation === 'tangential' ? (flipped ? 0.62 : -0.62) : 0
+  const dyEm = orientation === 'tangential' ? (flipped ? 0.75 : -0.75) : 0
   return { labelX, labelY, angleDeg, anchor, dyEm }
 }
 
