@@ -70,6 +70,11 @@ function isLabelTooWideForArc(text, spanDeg, radius, fontSize) {
 }
 
 const TX_LABEL_FONT_SIZE = 7
+// How far the transaction label's anchor point sits beyond the pie's own
+// edge, before the outward push/hanging-baseline nudge. Shared by every
+// place that positions a tangential label, and by the ring radius formula
+// below, so they can never drift out of sync with each other.
+const TX_TANGENTIAL_OFFSET = 4
 
 // Figures out how far each label reaches beyond the chart's own viewBox on
 // every side, so the card can grow just enough room in each direction — no
@@ -83,7 +88,7 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
     slice.subSlices.forEach((sub) => {
       if (!sub.tx) return
       const spanDeg = (sub.endPercent - sub.startPercent) * 360
-      const tangentialRadius = outerRadius + 4
+      const tangentialRadius = outerRadius + TX_TANGENTIAL_OFFSET
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
       const labelRadius = isTooWide ? outerRadius + 42 : tangentialRadius
@@ -392,8 +397,17 @@ export default function ConsolidatedPieChart({
   const cy = 140
   const outerRadius = 94
   const innerRadius = chartMode === 'donut' ? 57 : 0
-  const bracketRadius = 118
-  const textRadius = 130
+  const bracketRadius = (() => {
+    // How far a tangential label's own glyphs reach past its anchor point:
+    // the "outwardPush" world-space shift (matches the label rendering) plus
+    // a safety allowance for the hanging-baseline text's own height.
+    const outwardPush = TX_LABEL_FONT_SIZE * 0.9
+    const glyphHeightAllowance = TX_LABEL_FONT_SIZE * 1.15
+    const tangentialLabelReach = outerRadius + TX_TANGENTIAL_OFFSET + outwardPush + glyphHeightAllowance
+    const safetyGap = 4
+    return tangentialLabelReach + safetyGap
+  })()
+  const textRadius = bracketRadius + 14
 
   const activeTx = activeTxKey
     ? slices.flatMap((s) => s.subSlices).find((sub) => sub.key === activeTxKey)
@@ -583,7 +597,7 @@ export default function ConsolidatedPieChart({
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const tangentialRadius = outerRadius + 4
+                  const tangentialRadius = outerRadius + TX_TANGENTIAL_OFFSET
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 42 : tangentialRadius
