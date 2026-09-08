@@ -46,16 +46,17 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   // whole label extends outward from there — never back over the slices.
   // Which side counts as "base" flips along with the rotation above.
   const anchor = orientation === 'radial' ? (radialFlipped ? 'end' : 'start') : 'middle'
-  // For tangential labels, "central" baseline plus a guessed offset can still
-  // let part of the glyph (especially descenders like 'p'/'g'/'y') dip back
-  // toward the ring depending on the font's real metrics. 'hanging' anchors
-  // the *top* of the text's own em-box (measured by the browser from the
-  // actual font, not a guess) at the point and lets the whole box extend one
-  // direction only. Combined with a matching dy shift, the entire glyph
-  // — ascenders and descenders alike — is guaranteed to land outward, never
-  // back over the ring. Which side counts as "outward" flips with rotation.
-  const baseline = orientation === 'tangential' ? 'hanging' : 'central'
-  const dyEm = orientation === 'tangential' ? (flipped ? 0 : -1) : 0
+  // For tangential labels, "central" baseline centers the text exactly on
+  // the anchor point, so half the glyph would sit toward the ring by
+  // default. 'dominant-baseline: hanging' (an alternative that anchors just
+  // the top of the em-box) turned out to rely on inconsistent browser
+  // font-metric measurement in practice, so we stick with the reliable
+  // 'central' baseline everywhere and instead push the label out with a
+  // deliberately generous dy — erring on the side of a bit more gap rather
+  // than risking the glyph dipping back into the ring. Which direction
+  // counts as "outward" flips along with the rotation above.
+  const baseline = 'central'
+  const dyEm = orientation === 'tangential' ? (flipped ? 1.1 : -1.1) : 0
   return { labelX, labelY, angleDeg, anchor, baseline, dyEm }
 }
 
@@ -399,11 +400,12 @@ export default function ConsolidatedPieChart({
   const innerRadius = chartMode === 'donut' ? 57 : 0
   const bracketRadius = (() => {
     // How far a tangential label's own glyphs reach past its anchor point:
-    // the "outwardPush" world-space shift (matches the label rendering) plus
-    // a safety allowance for the hanging-baseline text's own height.
+    // the "outwardPush" world-space shift (matches the label rendering)
+    // plus the generous dy nudge used for the same labels (see dyEm above),
+    // which is the main thing now doing the work of clearing the ring.
     const outwardPush = TX_LABEL_FONT_SIZE * 0.9
-    const glyphHeightAllowance = TX_LABEL_FONT_SIZE * 1.15
-    const tangentialLabelReach = outerRadius + TX_TANGENTIAL_OFFSET + outwardPush + glyphHeightAllowance
+    const dyNudgeReach = TX_LABEL_FONT_SIZE * 1.1
+    const tangentialLabelReach = outerRadius + TX_TANGENTIAL_OFFSET + outwardPush + dyNudgeReach
     const safetyGap = 4
     return tangentialLabelReach + safetyGap
   })()

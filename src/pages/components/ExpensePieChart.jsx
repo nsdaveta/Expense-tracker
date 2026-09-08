@@ -54,8 +54,14 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   // direction only. Combined with a matching dy shift, the entire glyph
   // — ascenders and descenders alike — is guaranteed to land outward, never
   // back over the ring. Which side counts as "outward" flips with rotation.
-  const baseline = orientation === 'tangential' ? 'hanging' : 'central'
-  const dyEm = orientation === 'tangential' ? (flipped ? 0 : -1) : 0
+  // 'dominant-baseline: hanging' relies on the browser's own font-metric
+  // measurement, which turned out inconsistent in practice. 'central' is
+  // universally well-supported and predictable, so we use that everywhere
+  // and push the label out with a deliberately generous dy — erring on the
+  // side of a bit more gap rather than risking the glyph dipping back into
+  // the ring. Which direction counts as "outward" flips with rotation.
+  const baseline = 'central'
+  const dyEm = orientation === 'tangential' ? (flipped ? 1.1 : -1.1) : 0
   return { labelX, labelY, angleDeg, anchor, baseline, dyEm }
 }
 
