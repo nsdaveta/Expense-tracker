@@ -83,7 +83,7 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
     slice.subSlices.forEach((sub) => {
       if (!sub.tx) return
       const spanDeg = (sub.endPercent - sub.startPercent) * 360
-      const tangentialRadius = outerRadius + 9
+      const tangentialRadius = outerRadius + 5
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
       const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
@@ -448,7 +448,7 @@ export default function ExpensePieChart({
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const tangentialRadius = outerRadius + 9
+                  const tangentialRadius = outerRadius + 5
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius

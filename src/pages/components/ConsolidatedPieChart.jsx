@@ -83,7 +83,7 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
     slice.subSlices.forEach((sub) => {
       if (!sub.tx) return
       const spanDeg = (sub.endPercent - sub.startPercent) * 360
-      const tangentialRadius = outerRadius + 8
+      const tangentialRadius = outerRadius + 4
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
       const labelRadius = isTooWide ? outerRadius + 42 : tangentialRadius
@@ -392,8 +392,8 @@ export default function ConsolidatedPieChart({
   const cy = 140
   const outerRadius = 94
   const innerRadius = chartMode === 'donut' ? 57 : 0
-  const bracketRadius = 114
-  const textRadius = 128
+  const bracketRadius = 118
+  const textRadius = 130
 
   const activeTx = activeTxKey
     ? slices.flatMap((s) => s.subSlices).find((sub) => sub.key === activeTxKey)
@@ -583,7 +583,7 @@ export default function ConsolidatedPieChart({
                 .filter((sub) => sub.tx)
                 .map((sub) => {
                   const spanDeg = (sub.endPercent - sub.startPercent) * 360
-                  const tangentialRadius = outerRadius + 8
+                  const tangentialRadius = outerRadius + 4
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 42 : tangentialRadius
