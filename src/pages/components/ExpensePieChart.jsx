@@ -40,12 +40,23 @@ function getArcLabelTransform(startPercent, endPercent, radius, cx, cy, orientat
   let angleDeg = rawAngleDeg
   if (orientation === 'tangential') angleDeg += 90
   angleDeg = ((angleDeg % 360) + 360) % 360
-  if (angleDeg > 90 && angleDeg < 270) angleDeg -= 180
+  const flipped = angleDeg > 90 && angleDeg < 270
+  if (flipped) angleDeg -= 180
   // For radial labels, anchor the text at its base (nearest the pie) so the
   // whole label extends outward from there — never back over the slices.
   // Which side counts as "base" flips along with the rotation above.
   const anchor = orientation === 'radial' ? (radialFlipped ? 'end' : 'start') : 'middle'
-  return { labelX, labelY, angleDeg, anchor }
+  // For tangential labels, "central" baseline plus a guessed offset can still
+  // let part of the glyph (especially descenders like 'p'/'g'/'y') dip back
+  // toward the ring depending on the font's real metrics. 'hanging' anchors
+  // the *top* of the text's own em-box (measured by the browser from the
+  // actual font, not a guess) at the point and lets the whole box extend one
+  // direction only. Combined with a matching dy shift, the entire glyph
+  // — ascenders and descenders alike — is guaranteed to land outward, never
+  // back over the ring. Which side counts as "outward" flips with rotation.
+  const baseline = orientation === 'tangential' ? 'hanging' : 'central'
+  const dyEm = orientation === 'tangential' ? (flipped ? 0 : -1) : 0
+  return { labelX, labelY, angleDeg, anchor, baseline, dyEm }
 }
 
 // Estimates whether a label's text would spill past its own slice's arc
@@ -442,7 +453,7 @@ export default function ExpensePieChart({
                   const orientation = isTooWide ? 'radial' : 'tangential'
                   const labelRadius = isTooWide ? outerRadius + 15 : tangentialRadius
                   const outwardPush = orientation === 'tangential' ? TX_LABEL_FONT_SIZE * 0.9 : 0
-                  const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(
+                  const { labelX, labelY, angleDeg, anchor, baseline, dyEm } = getArcLabelTransform(
                     sub.startPercent,
                     sub.endPercent,
                     labelRadius,
@@ -460,7 +471,8 @@ export default function ExpensePieChart({
                         className="tx-arc-label"
                         style={{ fill: sub.meta.color }}
                         textAnchor={anchor}
-                        dominantBaseline="central"
+                        dominantBaseline={baseline}
+                        dy={`${dyEm}em`}
                       >
                         {sub.tx.title}
                       </text>
