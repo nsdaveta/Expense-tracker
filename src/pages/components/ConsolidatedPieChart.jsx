@@ -75,7 +75,7 @@ const TX_LABEL_FONT_SIZE = 7
 // edge, before the outward push/hanging-baseline nudge. Shared by every
 // place that positions a tangential label, and by the ring radius formula
 // below, so they can never drift out of sync with each other.
-const TX_TANGENTIAL_OFFSET = 4
+const TX_TANGENTIAL_OFFSET = 1
 
 // Figures out how far each label reaches beyond the chart's own viewBox on
 // every side, so the card can grow just enough room in each direction — no
@@ -92,7 +92,7 @@ function computeLabelClearance(slices, outerRadius, cx, cy, fontSize, viewBoxSiz
       const tangentialRadius = outerRadius + TX_TANGENTIAL_OFFSET
       const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, fontSize)
       const orientation = isTooWide ? 'radial' : 'tangential'
-      const labelRadius = isTooWide ? outerRadius + 42 : tangentialRadius
+      const labelRadius = isTooWide ? outerRadius + 69 : tangentialRadius
       const outwardPush = orientation === 'tangential' ? fontSize * 0.9 : 0
       const { labelX, labelY, angleDeg, anchor } = getArcLabelTransform(
         sub.startPercent,
@@ -394,8 +394,8 @@ export default function ConsolidatedPieChart({
   })
 
   // Geometry dimensions matching Expense/Income charts exactly
-  const cx = 140
-  const cy = 140
+  const cx = 170
+  const cy = 170
   const outerRadius = 94
   const innerRadius = chartMode === 'donut' ? 57 : 0
   const bracketRadius = (() => {
@@ -406,8 +406,11 @@ export default function ConsolidatedPieChart({
     const outwardPush = TX_LABEL_FONT_SIZE * 0.9
     const dyNudgeReach = TX_LABEL_FONT_SIZE * 1.1
     const tangentialLabelReach = outerRadius + TX_TANGENTIAL_OFFSET + outwardPush + dyNudgeReach
-    const safetyGap = 4
-    return tangentialLabelReach + safetyGap
+    // ~1cm of on-screen gap between the label and the ring, converted into
+    // viewBox units at this chart's scale (390px container / 340 viewBox
+    // units): 1cm ≈ 37.8px at 96dpi ≈ 33 viewBox units.
+    const visualGap = 30
+    return tangentialLabelReach + visualGap
   })()
   const textRadius = bracketRadius + 14
 
@@ -447,8 +450,8 @@ export default function ConsolidatedPieChart({
 
   // Grow the content area's top padding to exactly fit the widest label —
   // stopping right after its last word — instead of a fixed guess or clipping.
-  const svgContainerPx = 320
-  const svgViewBoxUnits = 280
+  const svgContainerPx = 390
+  const svgViewBoxUnits = 340
   const scale = svgContainerPx / svgViewBoxUnits
   const labelClearance = computeLabelClearance(slices, outerRadius, cx, cy, TX_LABEL_FONT_SIZE, svgViewBoxUnits)
   const contentPadding = {
@@ -529,7 +532,7 @@ export default function ConsolidatedPieChart({
         {/* SVG Container */}
         <div className="consolidated-svg-container outer-labeled-container">
           <svg
-            viewBox="0 0 280 280"
+            viewBox="0 0 340 340"
             className="consolidated-svg outer-labeled-svg"
             onMouseLeave={() => {
               setActiveHeadKey(null)
@@ -602,7 +605,7 @@ export default function ConsolidatedPieChart({
                   const tangentialRadius = outerRadius + TX_TANGENTIAL_OFFSET
                   const isTooWide = isLabelTooWideForArc(sub.tx.title, spanDeg, tangentialRadius, TX_LABEL_FONT_SIZE)
                   const orientation = isTooWide ? 'radial' : 'tangential'
-                  const labelRadius = isTooWide ? outerRadius + 42 : tangentialRadius
+                  const labelRadius = isTooWide ? outerRadius + 69 : tangentialRadius
                   const outwardPush = orientation === 'tangential' ? TX_LABEL_FONT_SIZE * 0.9 : 0
                   const { labelX, labelY, angleDeg, anchor, baseline, dyEm } = getArcLabelTransform(
                     sub.startPercent,
