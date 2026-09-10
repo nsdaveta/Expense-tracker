@@ -76,6 +76,44 @@ const TX_LABEL_FONT_SIZE = 7
 // place that positions a tangential label, and by the ring radius formula
 // below, so they can never drift out of sync with each other.
 const TX_TANGENTIAL_OFFSET = 1
+function computeDynamicVisualGap(slices, outerRadius, fontSize) {
+  const tangentialRadius = outerRadius + TX_TANGENTIAL_OFFSET
+  let maximumLabelReach = 0
+
+  slices.forEach((slice) => {
+    slice.subSlices.forEach((sub) => {
+      if (!sub.tx?.title) return
+
+      const spanDeg = (sub.endPercent - sub.startPercent) * 360
+
+      const isTooWide = isLabelTooWideForArc(
+        sub.tx.title,
+        spanDeg,
+        tangentialRadius,
+        fontSize
+      )
+
+      const orientation = isTooWide
+        ? 'radial'
+        : 'tangential'
+
+      const textLength =
+        (sub.tx.title.length || 0) * fontSize * 0.62
+
+      const labelReach =
+        orientation === 'radial'
+          ? textLength
+          : fontSize * 0.9 + fontSize * 1.1
+
+      maximumLabelReach = Math.max(
+        maximumLabelReach,
+        labelReach
+      )
+    })
+  })
+
+  return maximumLabelReach + 12
+}
 
 // Figures out how far each label reaches beyond the chart's own viewBox on
 // every side, so the card can grow just enough room in each direction — no
@@ -399,19 +437,20 @@ export default function ConsolidatedPieChart({
   const outerRadius = 94
   const innerRadius = chartMode === 'donut' ? 57 : 0
   const bracketRadius = (() => {
-    // How far a tangential label's own glyphs reach past its anchor point:
-    // the "outwardPush" world-space shift (matches the label rendering)
-    // plus the generous dy nudge used for the same labels (see dyEm above),
-    // which is the main thing now doing the work of clearing the ring.
-    const outwardPush = TX_LABEL_FONT_SIZE * 0.9
-    const dyNudgeReach = TX_LABEL_FONT_SIZE * 1.1
-    const tangentialLabelReach = outerRadius + TX_TANGENTIAL_OFFSET + outwardPush + dyNudgeReach
-    // ~1cm of on-screen gap between the label and the ring, converted into
-    // viewBox units at this chart's scale (390px container / 340 viewBox
-    // units): 1cm ≈ 37.8px at 96dpi ≈ 33 viewBox units.
-    const visualGap = 99
-    return tangentialLabelReach + visualGap
-  })()
+  const visualGap = computeDynamicVisualGap(
+    slices,
+    outerRadius,
+    TX_LABEL_FONT_SIZE
+  )
+
+  const tangentialLabelReach =
+    outerRadius +
+    TX_TANGENTIAL_OFFSET +
+    TX_LABEL_FONT_SIZE * 0.9 +
+    TX_LABEL_FONT_SIZE * 1.1
+
+  return tangentialLabelReach + visualGap
+})()
   const textRadius = bracketRadius + 14
 
   const activeTx = activeTxKey
