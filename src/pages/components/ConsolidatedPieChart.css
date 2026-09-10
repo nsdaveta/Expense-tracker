@@ -407,6 +407,7 @@
 
   .consolidated-heads-grid {
     grid-template-columns: 1fr;
+    border: 1px solid black;
     max-height: 220px;
   }
 
