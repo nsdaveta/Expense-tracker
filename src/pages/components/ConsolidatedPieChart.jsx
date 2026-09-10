@@ -409,7 +409,7 @@ export default function ConsolidatedPieChart({
     // ~1cm of on-screen gap between the label and the ring, converted into
     // viewBox units at this chart's scale (390px container / 340 viewBox
     // units): 1cm ≈ 37.8px at 96dpi ≈ 33 viewBox units.
-    const visualGap = 30
+    const visualGap = 100
     return tangentialLabelReach + visualGap
   })()
   const textRadius = bracketRadius + 14
