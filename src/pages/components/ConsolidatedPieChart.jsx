@@ -76,6 +76,7 @@ const TX_LABEL_FONT_SIZE = 7
 // place that positions a tangential label, and by the ring radius formula
 // below, so they can never drift out of sync with each other.
 const TX_TANGENTIAL_OFFSET = 1
+// Replace the entire computeDynamicVisualGap function with:
 function computeDynamicVisualGap(slices, outerRadius, fontSize) {
   const tangentialRadius = outerRadius + TX_TANGENTIAL_OFFSET
   let maximumLabelReach = 0
@@ -85,35 +86,29 @@ function computeDynamicVisualGap(slices, outerRadius, fontSize) {
       if (!sub.tx?.title) return
 
       const spanDeg = (sub.endPercent - sub.startPercent) * 360
-
       const isTooWide = isLabelTooWideForArc(
         sub.tx.title,
         spanDeg,
         tangentialRadius,
         fontSize
       )
-
-      const orientation = isTooWide
-        ? 'radial'
-        : 'tangential'
-
-      const textLength =
-        (sub.tx.title.length || 0) * fontSize * 0.62
+      const orientation = isTooWide ? 'radial' : 'tangential'
+      const textLength = (sub.tx.title.length || 0) * fontSize * 0.62
 
       const labelReach =
         orientation === 'radial'
           ? textLength
           : fontSize * 0.9 + fontSize * 1.1
 
-      maximumLabelReach = Math.max(
-        maximumLabelReach,
-        labelReach
-      )
+      maximumLabelReach = Math.max(maximumLabelReach, labelReach)
     })
   })
 
-  return maximumLabelReach + 12
+  // Exact half-inch gap in viewBox units (≈ 48px on screen at your scale)
+  const HALF_INCH_IN_VIEWBOX = 42
+  return maximumLabelReach + HALF_INCH_IN_VIEWBOX
 }
+
 
 // Figures out how far each label reaches beyond the chart's own viewBox on
 // every side, so the card can grow just enough room in each direction — no
