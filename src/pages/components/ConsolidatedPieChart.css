@@ -19,6 +19,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border: 1px solid black;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
